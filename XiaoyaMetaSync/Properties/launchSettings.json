@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "XiaoyaMetaSync": {
+      "commandName": "Project",
+      "commandLineArgs": "F:\\Workspaces\\VSWorkspace\\XiaoyaMetaSync\\XiaoyaMetaSync\\testfiles\\testdir.7z testfiles\\output http://xiaoya.host http://192.168.11.2",
+      "workingDirectory": "."
+    },
+    "all.mp4": {
+      "commandName": "Project",
+      "commandLineArgs": "F:/Documents/小雅元数据/all.7z ./testfiles/output",
+      "workingDirectory": "."
+    }
+  }
+}
