@@ -13,10 +13,4 @@
     <PackageReference Include="SharpCompress" Version="0.36.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="dll\7z.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>
