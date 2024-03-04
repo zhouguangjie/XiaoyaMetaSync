@@ -36,7 +36,15 @@ namespace XiaoyaMetaSync
             LOG_FILE = Path.Combine(LOG_DIR, DateTime.Now.ToString("yyyyMMddHHmmss") + ".log");
             LogLine($"ZipPath:{zipPath}");
             LogLine($"MetaOutput:{extractPath}");
-            SyncXiaoyaMetaWithMetaZip(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+            try
+            {
+                SyncXiaoyaMetaWithMetaZip(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+            }
+            catch (Exception ex)
+            {
+                LogLine(ex.Message);
+                LogLine(ex.StackTrace);
+            }
 
         }
 
