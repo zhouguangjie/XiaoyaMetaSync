@@ -7,7 +7,7 @@
     },
     "all.mp4": {
       "commandName": "Project",
-      "commandLineArgs": "F:/Documents/小雅元数据/all.7z ./testfiles/output",
+      "commandLineArgs": "F:/Documents/小雅元数据/all.zip ./testfiles/output http://xiaoya.host http://192.168.11.2",
       "workingDirectory": "."
     }
   }
