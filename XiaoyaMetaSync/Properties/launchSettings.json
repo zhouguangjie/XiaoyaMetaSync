@@ -17,7 +17,7 @@
     },
     "xiaoya_testJ": {
       "commandName": "Project",
-      "commandLineArgs": "F:\\Documents\\小雅元数据\\all.zip J:\\xiaoya_meta\\all http://xiaoya.host http://192.168.11.2",
+      "commandLineArgs": "\"G:\\Workspace\\XiaoyaSpace\\all.zip\" J:\\xiaoya_meta\\all http://xiaoya.host http://192.168.11.2",
       "workingDirectory": "."
     }
   }
