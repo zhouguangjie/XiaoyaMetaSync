@@ -38,53 +38,55 @@ namespace XiaoyaMetaSync
             LogLine($"MetaOutput:{extractPath}");
             try
             {
-                SyncXiaoyaMetaWithMetaZip(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                //SyncXiaoyaMetaTooSlow(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                //SyncXiaoyaMetaSlow(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                SyncXiaoyaMetaFast(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
             }
             catch (Exception ex)
             {
                 LogLine(ex.Message);
-                LogLine(ex.StackTrace);
+                LogLine(ex.ToString());
             }
 
         }
 
-        private static void LogLine(string line, bool writeLogFile = true)
+        private static void LogLine(string line)
         {
-            Console.WriteLine(line);
-            if (writeLogFile)
-            {
-                File.AppendAllLines(LOG_FILE, [line]);
-            }
+            File.AppendAllLines(LOG_FILE, [line]);
         }
 
-        private static void SyncXiaoyaMetaWithMetaZip(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
+        private static void SyncXiaoyaMetaTooSlow(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
         {
             var replaceStrmUrlHost = !string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) && !string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost);
-            MemoryStream writeFileStream = new MemoryStream();
+
             var options = new ReaderOptions
             {
-                ArchiveEncoding = new ArchiveEncoding(Encoding.UTF8, Encoding.UTF8),
-                LookForHeader = true,
+                ArchiveEncoding = new ArchiveEncoding { Default = Encoding.UTF8 },
+                DisableCheckIncomplete = true,
+                LeaveStreamOpen = true,
             };
-#if DEBUG
             var cnt = 0;
-#endif
+            var fileCnt = 0;
             using (var fs = File.OpenRead(metaZipPath))
             using (var xystrm = new XiaoyaMetaZipStream(fs))
-            using (var archive = SevenZipArchive.Open(xystrm))
+            using (var archive = SevenZipArchive.Open(xystrm, options))
+            using (var writeFileStream = new MemoryStream())
             {
+                var total = archive.Entries.Count;
                 foreach (var entry in archive.Entries)
                 {
+                    cnt++;
                     if (!entry.IsDirectory && entry.Size > 0)
                     {
+                        fileCnt++;
 #if DEBUG
-                        if (cnt++ > 20) return;
+                        //if (fileCnt > 100) return;
 #endif
-                        var relativeFileName = entry.Key.Replace(" \\", "\\").Replace(" /", "/");
+                        var relativeFileName = entry.Key.Replace(" \\", "\\").Replace(" /", "/").Replace("\\ ", "\\").Replace("/ ", "/").Trim();
                         string extractedFilePath = Path.Combine(xiaoyaMetaOutputPath, relativeFileName);
                         if (File.Exists(extractedFilePath))
                         {
-                            LogLine($"Skipped Exists:{relativeFileName}", false);
+                            Console.WriteLine($"[{cnt}/{total}]Skipped Exists:{relativeFileName}");
                         }
                         else
                         {
@@ -92,24 +94,28 @@ namespace XiaoyaMetaSync
                             if (!Directory.Exists(dir))
                                 Directory.CreateDirectory(dir);
 
-
+                            Console.WriteLine($"[{cnt}/{total}]New File:{relativeFileName}");
+                            writeFileStream.Seek(0, SeekOrigin.Begin);
+                            var startDate = DateTime.Now;
+                            entry.WriteTo(writeFileStream);
+                            var duration = (int)(DateTime.Now - startDate).TotalSeconds;
+                            Console.WriteLine($"[{cnt}/{total}]Expanded({duration}s):{relativeFileName}");
                             if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
                             {
-                                writeFileStream.Seek(0, SeekOrigin.Begin);
-                                entry.WriteTo(writeFileStream);
-                                var fileBytes = new byte[entry.Size];
-                                writeFileStream.Seek(0, SeekOrigin.Begin);
-                                writeFileStream.Read(fileBytes, 0, fileBytes.Length);
-
-                                var strmContent = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
                                 File.WriteAllText(extractedFilePath, strmContent);
-                                LogLine($"Replaced Strm File:{relativeFileName}", false);
                             }
                             else
                             {
-                                entry.WriteToFile(extractedFilePath);
+                                writeFileStream.Seek(0, SeekOrigin.Begin);
+                                var buf = new byte[entry.Size];
+                                writeFileStream.Read(buf, 0, buf.Length);
+                                File.WriteAllBytes(extractedFilePath, buf);
+                                //entry.WriteToFile(extractedFilePath);
                             }
-                            LogLine($"New File:{relativeFileName}");
+                            Console.WriteLine($"[{cnt}/{total}]Stored:{relativeFileName}");
+                            LogLine($"[New]{relativeFileName}");
+
                         }
                     }
 
@@ -117,6 +123,135 @@ namespace XiaoyaMetaSync
             }
         }
 
+        private static void SyncXiaoyaMetaSlow(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
+        {
+            var replaceStrmUrlHost = !string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) && !string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost);
+            var libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", "7z.dll");
+            SevenZip.SevenZipExtractor.SetLibraryPath(libPath);
+
+            var cnt = 0;
+            var fileCnt = 0;
+            using (var fs = File.OpenRead(metaZipPath))
+            using (var xystrm = new XiaoyaMetaZipStream(fs))
+            using (var archive = new SevenZip.SevenZipExtractor(xystrm, true, SevenZip.InArchiveFormat.SevenZip))
+            using (var writeFileStream = new MemoryStream())
+            {
+
+                var total = archive.FilesCount;
+                foreach (var entry in archive.ArchiveFileData)
+                {
+                    cnt++;
+                    if (!entry.IsDirectory && entry.Size > 0)
+                    {
+                        fileCnt++;
+#if DEBUG
+                        //if (fileCnt > 100) return;
+#endif
+                        var relativeFileName = entry.FileName.Replace(" \\", "\\").Replace(" /", "/").Replace("\\ ", "\\").Replace("/ ", "/").Trim();
+                        string extractedFilePath = Path.Combine(xiaoyaMetaOutputPath, relativeFileName);
+                        if (File.Exists(extractedFilePath))
+                        {
+                            Console.WriteLine($"[{cnt}/{total}]Skipped Exists:{relativeFileName}");
+                        }
+                        else
+                        {
+                            var dir = Path.GetDirectoryName(extractedFilePath);
+                            if (!Directory.Exists(dir))
+                                Directory.CreateDirectory(dir);
+
+                            Console.WriteLine($"[{cnt}/{total}]New File:{relativeFileName}");
+                            writeFileStream.Seek(0, SeekOrigin.Begin);
+                            var startDate = DateTime.Now;
+                            archive.ExtractFile(entry.Index, writeFileStream);
+                            var duration = (int)(DateTime.Now - startDate).TotalSeconds;
+                            Console.WriteLine($"[{cnt}/{total}]Expanded({duration}s):{relativeFileName}");
+                            if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
+                            {
+                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                                File.WriteAllText(extractedFilePath, strmContent);
+                            }
+                            else
+                            {
+                                writeFileStream.Seek(0, SeekOrigin.Begin);
+                                var buf = new byte[entry.Size];
+                                writeFileStream.Read(buf, 0, buf.Length);
+                                File.WriteAllBytes(extractedFilePath, buf);
+                                //entry.WriteToFile(extractedFilePath);
+                            }
+                            Console.WriteLine($"[{cnt}/{total}]Stored:{relativeFileName}");
+                            LogLine($"[New]{relativeFileName}");
+
+                        }
+                    }
+
+                }
+            }
+        }
+
+        private static void SyncXiaoyaMetaFast(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
+        {
+
+            var replaceStrmUrlHost = !string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) && !string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost);
+            var libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", "7z.dll");
+
+            var cnt = 0;
+            var fileCnt = 0;
+            using (var fs = File.OpenRead(metaZipPath))
+            using (var xystrm = new XiaoyaMetaZipStream(fs))
+            using (var archive = new SevenZipExtractor.ArchiveFile(xystrm, SevenZipExtractor.SevenZipFormat.SevenZip, libPath))
+            using (var writeFileStream = new MemoryStream())
+            {
+
+                var total = archive.Entries.Count;
+                foreach (var entry in archive.Entries)
+                {
+                    cnt++;
+                    if (!entry.IsFolder && entry.Size > 0)
+                    {
+                        fileCnt++;
+#if DEBUG
+                        //if (fileCnt > 100) return;
+#endif
+                        var relativeFileName = entry.FileName.Replace(" \\", "\\").Replace(" /", "/").Replace("\\ ", "\\").Replace("/ ", "/").Trim();
+                        string extractedFilePath = Path.Combine(xiaoyaMetaOutputPath, relativeFileName);
+                        if (File.Exists(extractedFilePath))
+                        {
+                            Console.WriteLine($"[{cnt}/{total}]Skipped Exists:{relativeFileName}");
+                        }
+                        else
+                        {
+                            var dir = Path.GetDirectoryName(extractedFilePath);
+                            if (!Directory.Exists(dir))
+                                Directory.CreateDirectory(dir);
+
+                            Console.WriteLine($"[{cnt}/{total}]New File:{relativeFileName}");
+                            writeFileStream.Seek(0, SeekOrigin.Begin);
+                            var startDate = DateTime.Now;
+                            entry.Extract(writeFileStream);
+                            var duration = (int)(DateTime.Now - startDate).TotalSeconds;
+                            Console.WriteLine($"[{cnt}/{total}]Expanded({duration}s):{relativeFileName}");
+                            if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
+                            {
+                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                                File.WriteAllText(extractedFilePath, strmContent);
+                            }
+                            else
+                            {
+                                writeFileStream.Seek(0, SeekOrigin.Begin);
+                                var buf = new byte[entry.Size];
+                                writeFileStream.Read(buf, 0, buf.Length);
+                                File.WriteAllBytes(extractedFilePath, buf);
+                                //entry.WriteToFile(extractedFilePath);
+                            }
+                            Console.WriteLine($"[{cnt}/{total}]Stored:{relativeFileName}");
+                            LogLine($"[New]{relativeFileName}");
+
+                        }
+                    }
+
+                }
+            }
+        }
     }
     class XiaoyaMetaZipStream : Stream
     {
@@ -126,7 +261,7 @@ namespace XiaoyaMetaSync
 
         public override bool CanSeek => fsInput.CanSeek;
 
-        public override bool CanWrite => fsInput.CanWrite;
+        public override bool CanWrite => false;
 
         public override long Length => fsInput.Length - fileStartIndex;
 
@@ -156,7 +291,7 @@ namespace XiaoyaMetaSync
 
         public override void Flush()
         {
-            fsInput.Flush();
+            //fsInput.Flush();
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -185,12 +320,12 @@ namespace XiaoyaMetaSync
 
         public override void SetLength(long value)
         {
-            fsInput.SetLength(value + fileStartIndex);
+            //fsInput.SetLength(value + fileStartIndex);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            fsInput.Write(buffer, offset, count);
+            //fsInput.Write(buffer, offset, count);
         }
     }
 }

@@ -2,12 +2,22 @@
   "profiles": {
     "XiaoyaMetaSync": {
       "commandName": "Project",
-      "commandLineArgs": "F:\\Workspaces\\VSWorkspace\\XiaoyaMetaSync\\XiaoyaMetaSync\\testfiles\\testdir.7z testfiles\\output http://xiaoya.host http://192.168.11.2",
+      "commandLineArgs": "testfiles\\testdir.7z testfiles\\output http://xiaoya.host http://192.168.11.2",
       "workingDirectory": "."
     },
     "all.mp4": {
       "commandName": "Project",
       "commandLineArgs": "F:/Documents/小雅元数据/all.zip ./testfiles/output http://xiaoya.host http://192.168.11.2",
+      "workingDirectory": "."
+    },
+    "xiaoya_produce": {
+      "commandName": "Project",
+      "commandLineArgs": "G:\\Workspace\\XiaoyaSpace\\all.zip Y:\\all http://xiaoya.host http://192.168.11.2",
+      "workingDirectory": "."
+    },
+    "xiaoya_testJ": {
+      "commandName": "Project",
+      "commandLineArgs": "F:\\Documents\\小雅元数据\\all.zip J:\\xiaoya_meta\\all http://xiaoya.host http://192.168.11.2",
       "workingDirectory": "."
     }
   }
