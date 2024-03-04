@@ -19,7 +19,6 @@ namespace XiaoyaMetaSync
             if (!File.Exists(zipPath))
             {
                 Console.WriteLine($"Zip File Not Exists:{zipPath}");
-                Console.ReadLine();
                 return;
             }
             SyncXiaoyaMetaWithMetaZip(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
