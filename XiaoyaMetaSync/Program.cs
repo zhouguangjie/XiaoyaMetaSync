@@ -3,85 +3,128 @@ using SharpCompress.Archives.SevenZip;
 using SharpCompress.Common;
 using SharpCompress.Readers;
 using System.Text;
+using System.Web;
 
 namespace XiaoyaMetaSync
 {
     internal class Program
     {
-        private static readonly string LOG_DIR = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XiaoyaMetaSync", "Log");
 
-        public static string LOG_FILE { get; private set; }
-
-        private static int totalEntry = 0;
-        private static int cnt = 0;
-        private static int fileCnt = 0;
-        private static int newFileCnt = 0;
         static void Main(string[] args)
+        {
+            if (args.Length < 1)
+            {
+                PrintHelp();
+                return;
+            }
+
+            switch (args[0])
+            {
+                case "--sync": CmdSync(args); break;
+                case "--strm": CmdStrm(args); break;
+                default: PrintHelp(); break;
+            }
+        }
+
+        private static void PrintHelp()
+        {
+            Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [<strm file host> <new strm file host>]");
+            Console.WriteLine("Usage: --strm <dir>");
+        }
+
+        private static void CmdStrm(string[] args)
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage: command <xiaoya meta zip> <output path> [<strm file host> <new strm file host>]");
+                Console.WriteLine("Usage: --strm <dir>");
+                return;
+            }
+            CommonLogger.NewLog();
+            var report = StrmFileHelper.ProcessStrm(args[1], true);
+            CommonLogger.LogLine($"Matched:{report.MatchFiles}, Processed:{report.Replaced}", true);
+            CommonLogger.LogLine($"Finish:{report.StartTime} --> {report.EndTime}, Duration: {report.Duration}", true);
+        }
+
+        private static void CmdSync(string[] args)
+        {
+            if (args.Length < 3)
+            {
+                Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [<strm file host> <new strm file host>]");
                 return;
             }
 
 
-            var zipPath = args[0];
-            var extractPath = args[1];
-            var strmXiaoyaUrlHost = args.Length > 2 ? args[2] : null;
-            var replaceStrmXiaoyaUrlHost = args.Length > 3 ? args[3] : null;
+            var zipPath = args[1];
+            var extractPath = args[2];
+            var strmXiaoyaUrlHost = args.Length > 2 ? args[3] : null;
+            var replaceStrmXiaoyaUrlHost = args.Length > 3 ? args[4] : null;
 
             if (!File.Exists(zipPath))
             {
                 Console.WriteLine($"Zip File Not Exists:{zipPath}");
                 return;
             }
-            if (!Directory.Exists(LOG_DIR))
-                Directory.CreateDirectory(LOG_DIR);
-            LOG_FILE = Path.Combine(LOG_DIR, DateTime.Now.ToString("yyyyMMddHHmmss") + ".log");
-            LogLine($"ZipPath:{zipPath}", true);
-            LogLine($"MetaOutput:{extractPath}", true);
+            CommonLogger.NewLog();
+            CommonLogger.LogLine($"ZipPath:{zipPath}", true);
+            CommonLogger.LogLine($"MetaOutput:{extractPath}", true);
             try
             {
                 var startDate = DateTime.Now;
-                LogLine($"Start:{DateTime.Now}", true);
-                //SyncXiaoyaMetaTooSlow(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
-                //SyncXiaoyaMetaSlow(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
-                SyncXiaoyaMetaFast(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                CommonLogger.LogLine($"Start:{DateTime.Now}", true);
+
+                XiaoYaMetaSync.Sync(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
                 var duration = DateTime.Now - startDate;
-                LogLine($"Total:{totalEntry}, Effective File:{fileCnt}, New:{newFileCnt}", true);
-                LogLine($"Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
+                CommonLogger.LogLine($"Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
             }
             catch (Exception ex)
             {
-                LogLine(ex.Message, true);
-                LogLine(ex.ToString(), true);
+                CommonLogger.LogLine(ex.Message, true);
+                CommonLogger.LogLine(ex.ToString(), true);
             }
-
         }
+    }
 
-        private static void LogLine(string line, bool writeConsole = false)
+    class CommonLogger
+    {
+        private static readonly string LOG_DIR = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XiaoyaMetaSync", "Log");
+        public static string? LOG_FILE { get; private set; }
+        public static void LogLine(string line, bool writeConsole = false)
         {
-            File.AppendAllLines(LOG_FILE, [line]);
+            if (!string.IsNullOrWhiteSpace(LOG_FILE)) File.AppendAllLines(LOG_FILE, [line]);
             if (writeConsole) Console.WriteLine(line);
         }
-        private static string AdaptWindowsFileName(string filename)
+
+        internal static void NewLog()
         {
-            return filename.Replace('|', '_')
-                .Replace('"', '_')
-                .Replace('*', '_')
-                .Replace('<', '_')
-                .Replace('>', '_')
-                .Replace('?', '_')
-                .Replace(':', '_')
-                .Replace(" \\", "\\")
-                .Replace(" /", "/")
-                .Replace("\\ ", "\\")
-                .Replace("/ ", "/")
-                .Trim();
+            if (!Directory.Exists(LOG_DIR))
+                Directory.CreateDirectory(LOG_DIR);
+            LOG_FILE = Path.Combine(LOG_DIR, DateTime.Now.ToString("yyyyMMddHHmmss") + ".log");
         }
-        private static void SyncXiaoyaMetaTooSlow(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
+    }
+
+    public class XiaoYaMetaSync
+    {
+        private static int totalEntry = 0;
+        private static int cnt = 0;
+        private static int fileCnt = 0;
+        private static int newFileCnt = 0;
+        public static void Sync(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
         {
-            var replaceStrmUrlHost = !string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) && !string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost);
+            IEnumerable<KeyValuePair<string, string>> replacements;
+            if (string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) || string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost))
+                replacements = [];
+            else
+                replacements = [new(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost)];
+
+            //SyncTooSlow(metaZipPath, xiaoyaMetaOutputPath, replacements);
+            //SyncSlow(metaZipPath, xiaoyaMetaOutputPath, replacements);
+            SyncFast(metaZipPath, xiaoyaMetaOutputPath, replacements);
+        }
+
+
+        private static void SyncTooSlow(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
+        {
+            var replaceStrmUrlHost = replacements.Count() > 0;
 
             var options = new ReaderOptions
             {
@@ -102,7 +145,7 @@ namespace XiaoyaMetaSync
                     if (!entry.IsDirectory && entry.Size > 0)
                     {
                         fileCnt++;
-                        var relativeFileName = AdaptWindowsFileName(entry.Key);
+                        var relativeFileName = CommonUtility.AdaptWindowsFileName(entry.Key);
                         string extractedFilePath = Path.Combine(xiaoyaMetaOutputPath, relativeFileName);
                         if (File.Exists(extractedFilePath))
                         {
@@ -122,8 +165,15 @@ namespace XiaoyaMetaSync
                             Console.WriteLine($"[{cnt}/{totalEntry}]Expanded({duration}s):{relativeFileName}");
                             if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
                             {
-                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
-                                File.WriteAllText(extractedFilePath, strmContent);
+                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size);
+                                if (StrmFileHelper.ProcesStrmFileContent(strmContent, replacements, out string newContent))
+                                {
+                                    File.WriteAllText(extractedFilePath, newContent);
+                                }
+                                else
+                                {
+                                    File.WriteAllText(extractedFilePath, strmContent);
+                                }
                             }
                             else
                             {
@@ -134,17 +184,19 @@ namespace XiaoyaMetaSync
                             }
                             newFileCnt++;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Stored:{relativeFileName}");
-                            LogLine($"[New]{relativeFileName}");
+                            CommonLogger.LogLine($"[New]{relativeFileName}");
 
                         }
                     }
 
                 }
             }
+
+            CommonLogger.LogLine($"Total:{totalEntry}, Effective File:{fileCnt}, New:{newFileCnt}", true);
         }
-        private static void SyncXiaoyaMetaSlow(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
+        private static void SyncSlow(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
         {
-            var replaceStrmUrlHost = !string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) && !string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost);
+            var replaceStrmUrlHost = replacements.Count() > 0;
             var libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", "7z.dll");
             SevenZip.SevenZipExtractor.SetLibraryPath(libPath);
 
@@ -161,7 +213,7 @@ namespace XiaoyaMetaSync
                     if (!entry.IsDirectory && entry.Size > 0)
                     {
                         fileCnt++;
-                        var relativeFileName = AdaptWindowsFileName(entry.FileName);
+                        var relativeFileName = CommonUtility.AdaptWindowsFileName(entry.FileName);
                         string extractedFilePath = Path.Combine(xiaoyaMetaOutputPath, relativeFileName);
                         if (File.Exists(extractedFilePath))
                         {
@@ -181,8 +233,15 @@ namespace XiaoyaMetaSync
                             Console.WriteLine($"[{cnt}/{totalEntry}]Expanded({duration}s):{relativeFileName}");
                             if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
                             {
-                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
-                                File.WriteAllText(extractedFilePath, strmContent);
+                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size);
+                                if (StrmFileHelper.ProcesStrmFileContent(strmContent, replacements, out string newContent))
+                                {
+                                    File.WriteAllText(extractedFilePath, newContent);
+                                }
+                                else
+                                {
+                                    File.WriteAllText(extractedFilePath, strmContent);
+                                }
                             }
                             else
                             {
@@ -193,18 +252,19 @@ namespace XiaoyaMetaSync
                             }
                             newFileCnt++;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Stored:{relativeFileName}");
-                            LogLine($"[New]{relativeFileName}");
+                            CommonLogger.LogLine($"[New]{relativeFileName}");
 
                         }
                     }
 
                 }
             }
-        }
-        private static void SyncXiaoyaMetaFast(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
-        {
 
-            var replaceStrmUrlHost = !string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) && !string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost);
+            CommonLogger.LogLine($"Total:{totalEntry}, Effective File:{fileCnt}, New:{newFileCnt}", true);
+        }
+        private static void SyncFast(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
+        {
+            var replaceStrmUrlHost = replacements.Count() > 0;
             var libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", "7z.dll");
 
             using (var fs = File.OpenRead(metaZipPath))
@@ -220,7 +280,7 @@ namespace XiaoyaMetaSync
                     if (!entry.IsFolder && entry.Size > 0)
                     {
                         fileCnt++;
-                        var relativeFileName = AdaptWindowsFileName(entry.FileName);
+                        var relativeFileName = CommonUtility.AdaptWindowsFileName(entry.FileName);
                         string extractedFilePath = Path.Combine(xiaoyaMetaOutputPath, relativeFileName);
                         if (File.Exists(extractedFilePath))
                         {
@@ -240,8 +300,16 @@ namespace XiaoyaMetaSync
                             Console.WriteLine($"[{cnt}/{totalEntry}]Expanded({duration}s):{relativeFileName}");
                             if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
                             {
-                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size).Replace(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
-                                File.WriteAllText(extractedFilePath, strmContent);
+                                var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size);
+
+                                if (StrmFileHelper.ProcesStrmFileContent(strmContent, replacements, out string newContent))
+                                {
+                                    File.WriteAllText(extractedFilePath, newContent);
+                                }
+                                else
+                                {
+                                    File.WriteAllText(extractedFilePath, strmContent);
+                                }
                             }
                             else
                             {
@@ -252,13 +320,117 @@ namespace XiaoyaMetaSync
                             }
                             newFileCnt++;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Stored:{relativeFileName}");
-                            LogLine($"[New]{relativeFileName}");
+                            CommonLogger.LogLine($"[New]{relativeFileName}");
 
                         }
                     }
 
                 }
             }
+
+            CommonLogger.LogLine($"Total:{totalEntry}, Effective File:{fileCnt}, New:{newFileCnt}", true);
+        }
+
+    }
+
+    public class CommonUtility
+    {
+        public static string AdaptWindowsFileName(string filename)
+        {
+            return filename.Replace('|', '_')
+                .Replace('"', '_')
+                .Replace('*', '_')
+                .Replace('<', '_')
+                .Replace('>', '_')
+                .Replace('?', '_')
+                .Replace(':', '_')
+                .Replace(" \\", "\\")
+                .Replace(" /", "/")
+                .Replace("\\ ", "\\")
+                .Replace("/ ", "/")
+                .Trim();
+        }
+    }
+
+    public class StrmFileHelper
+    {
+
+        public class ProcessStrmReport
+        {
+            public DateTime StartTime { get; set; }
+            public DateTime EndTime { get; set; }
+            public TimeSpan Duration => EndTime - StartTime;
+            public int Replaced { get; set; } = 0;
+            public int MatchFiles { get; set; } = 0;
+        }
+        public static ProcessStrmReport ProcessStrm(string dir, bool recursive)
+        {
+            return ProcessStrm(dir, recursive, null);
+        }
+
+        public static ProcessStrmReport ProcessStrm(string dir, bool recursive, IEnumerable<KeyValuePair<string, string>>? replacements)
+        {
+            var report = new ProcessStrmReport();
+            report.StartTime = DateTime.Now;
+            RecursiveProcessStrm(dir, recursive, replacements, report);
+            report.EndTime = DateTime.Now;
+            return report;
+        }
+
+        private static void RecursiveProcessStrm(string path, bool recursive, IEnumerable<KeyValuePair<string, string>>? replacements, ProcessStrmReport report)
+        {
+            if (Directory.Exists(path))
+            {
+                var files = Directory.GetFiles(path, "*.strm");
+                foreach (var file in files)
+                {
+                    report.MatchFiles++;
+                    if (ProcessStrmFile(file, replacements))
+                    {
+                        CommonLogger.LogLine($"[Processed] {file}", true);
+                        report.Replaced++;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Ignored] {file}");
+                    }
+                }
+
+                if (recursive)
+                {
+                    var dirs = Directory.GetDirectories(path);
+                    foreach (var dir in dirs)
+                    {
+                        RecursiveProcessStrm(dir, true, replacements, report);
+                    }
+                }
+            }
+        }
+
+
+        public static bool ProcessStrmFile(string filePath, IEnumerable<KeyValuePair<string, string>>? replacements)
+        {
+            var content = File.ReadAllText(filePath);
+            if (ProcesStrmFileContent(content, replacements, out string newContent))
+            {
+                File.WriteAllText(filePath, newContent);
+                return true;
+            }
+            return false;
+        }
+
+        public static bool ProcesStrmFileContent(string content, IEnumerable<KeyValuePair<string, string>>? replacements, out string newContent)
+        {
+            newContent = content;
+            if (replacements != null)
+            {
+                foreach (var entry in replacements)
+                {
+                    newContent = content.Replace(entry.Key, entry.Value);
+                }
+            }
+            newContent = HttpUtility.UrlDecode(newContent);
+            return newContent != content;
         }
     }
 
