@@ -18,46 +18,82 @@ namespace XiaoyaMetaSync
                 return;
             }
 
-            switch (args[0])
+            try
             {
-                case "--sync": CmdSync(args); break;
-                case "--strm": CmdStrm(args); break;
-                default: PrintHelp(); break;
+                switch (args[0])
+                {
+                    case "--sync": CmdSync(args); break;
+                    case "--strm": CmdStrm(args); break;
+                    default: PrintHelp(); break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
 
+        private static void PrintHelpSync()
+        {
+            Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [<--replace|-R> <strm file old string> <strm file new string>]...");
+        }
+        private static void PrintHelpStrm()
+        {
+            Console.WriteLine("Usage: --strm <dir> [<--replace|-R> <strm file old string> <strm file new string>]...");
+        }
         private static void PrintHelp()
         {
-            Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [<strm file host> <new strm file host>]");
-            Console.WriteLine("Usage: --strm <dir>");
+            PrintHelpSync();
+            PrintHelpStrm();
         }
 
         private static void CmdStrm(string[] args)
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage: --strm <dir>");
+                PrintHelpStrm();
                 return;
             }
             CommonLogger.NewLog();
-            var report = StrmFileHelper.ProcessStrm(args[1], true);
+            var replacements = GetReplacements(args);
+            var report = StrmFileHelper.ProcessStrm(args[1], true, replacements);
             CommonLogger.LogLine($"Matched:{report.MatchFiles}, Processed:{report.Replaced}", true);
             CommonLogger.LogLine($"Finish:{report.StartTime} --> {report.EndTime}, Duration: {report.Duration}", true);
+        }
+
+        private static List<KeyValuePair<string, string>> GetReplacements(string[] args)
+        {
+            var res = new List<KeyValuePair<string, string>>();
+            for (int i = 0; i < args.Length; i++)
+            {
+                var cur = args[i];
+                if (cur.ToLower() == "--replace" || cur == "-R")
+                {
+                    if (args.Length > i + 2)
+                    {
+                        res.Add(new KeyValuePair<string, string>(args[i + 1], args[i + 2]));
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Required argument: --replace <old string> <new string>");
+                    }
+                }
+
+            }
+            return res;
         }
 
         private static void CmdSync(string[] args)
         {
             if (args.Length < 3)
             {
-                Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [<strm file host> <new strm file host>]");
+                PrintHelpSync();
                 return;
             }
 
-
             var zipPath = args[1];
             var extractPath = args[2];
-            var strmXiaoyaUrlHost = args.Length > 2 ? args[3] : null;
-            var replaceStrmXiaoyaUrlHost = args.Length > 3 ? args[4] : null;
+            var replacments = GetReplacements(args);
 
             if (!File.Exists(zipPath))
             {
@@ -72,7 +108,7 @@ namespace XiaoyaMetaSync
                 var startDate = DateTime.Now;
                 CommonLogger.LogLine($"Start:{DateTime.Now}", true);
 
-                XiaoYaMetaSync.Sync(zipPath, extractPath, strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost);
+                XiaoYaMetaSync.Sync(zipPath, extractPath, replacments);
                 var duration = DateTime.Now - startDate;
                 CommonLogger.LogLine($"Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
             }
@@ -108,14 +144,8 @@ namespace XiaoyaMetaSync
         private static int cnt = 0;
         private static int fileCnt = 0;
         private static int newFileCnt = 0;
-        public static void Sync(string metaZipPath, string xiaoyaMetaOutputPath, string? strmXiaoyaUrlHost, string? replaceStrmXiaoyaUrlHost)
+        public static void Sync(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
         {
-            IEnumerable<KeyValuePair<string, string>> replacements;
-            if (string.IsNullOrWhiteSpace(strmXiaoyaUrlHost) || string.IsNullOrWhiteSpace(replaceStrmXiaoyaUrlHost))
-                replacements = [];
-            else
-                replacements = [new(strmXiaoyaUrlHost, replaceStrmXiaoyaUrlHost)];
-
             //SyncTooSlow(metaZipPath, xiaoyaMetaOutputPath, replacements);
             //SyncSlow(metaZipPath, xiaoyaMetaOutputPath, replacements);
             SyncFast(metaZipPath, xiaoyaMetaOutputPath, replacements);
@@ -124,7 +154,7 @@ namespace XiaoyaMetaSync
 
         private static void SyncTooSlow(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
         {
-            var replaceStrmUrlHost = replacements.Count() > 0;
+            var replaceStrm = replacements != null && replacements.Count() > 0;
 
             var options = new ReaderOptions
             {
@@ -163,7 +193,7 @@ namespace XiaoyaMetaSync
                             entry.WriteTo(writeFileStream);
                             var duration = (int)(DateTime.Now - startDate).TotalSeconds;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Expanded({duration}s):{relativeFileName}");
-                            if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
+                            if (replaceStrm && relativeFileName.EndsWith(".strm"))
                             {
                                 var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size);
                                 if (StrmFileHelper.ProcesStrmFileContent(strmContent, replacements, out string newContent))
@@ -196,7 +226,7 @@ namespace XiaoyaMetaSync
         }
         private static void SyncSlow(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
         {
-            var replaceStrmUrlHost = replacements.Count() > 0;
+            var replaceStrm = replacements != null && replacements.Count() > 0;
             var libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", "7z.dll");
             SevenZip.SevenZipExtractor.SetLibraryPath(libPath);
 
@@ -231,7 +261,7 @@ namespace XiaoyaMetaSync
                             archive.ExtractFile(entry.Index, writeFileStream);
                             var duration = (int)(DateTime.Now - startDate).TotalSeconds;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Expanded({duration}s):{relativeFileName}");
-                            if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
+                            if (replaceStrm && relativeFileName.EndsWith(".strm"))
                             {
                                 var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size);
                                 if (StrmFileHelper.ProcesStrmFileContent(strmContent, replacements, out string newContent))
@@ -264,7 +294,7 @@ namespace XiaoyaMetaSync
         }
         private static void SyncFast(string metaZipPath, string xiaoyaMetaOutputPath, IEnumerable<KeyValuePair<string, string>> replacements)
         {
-            var replaceStrmUrlHost = replacements.Count() > 0;
+            var replaceStrm = replacements != null && replacements.Count() > 0;
             var libPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", "7z.dll");
 
             using (var fs = File.OpenRead(metaZipPath))
@@ -298,7 +328,7 @@ namespace XiaoyaMetaSync
                             entry.Extract(writeFileStream);
                             var duration = (int)(DateTime.Now - startDate).TotalSeconds;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Expanded({duration}s):{relativeFileName}");
-                            if (replaceStrmUrlHost && relativeFileName.EndsWith(".strm"))
+                            if (replaceStrm && relativeFileName.EndsWith(".strm"))
                             {
                                 var strmContent = Encoding.UTF8.GetString(writeFileStream.GetBuffer(), 0, (int)entry.Size);
 
@@ -426,7 +456,7 @@ namespace XiaoyaMetaSync
             {
                 foreach (var entry in replacements)
                 {
-                    newContent = content.Replace(entry.Key, entry.Value);
+                    newContent = newContent.Replace(entry.Key, entry.Value);
                 }
             }
             newContent = HttpUtility.UrlDecode(newContent);

@@ -6,27 +6,27 @@
     },
     "sync_xiaoya_produce": {
       "commandName": "Project",
-      "commandLineArgs": "--sync G:\\Workspace\\XiaoyaSpace\\all.zip Y:\\all http://xiaoya.host http://192.168.11.2",
+      "commandLineArgs": "--sync G:\\Workspace\\XiaoyaSpace\\all.zip Y:\\all -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
     },
     "sync_xiaoya_drivej": {
       "commandName": "Project",
-      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" J:\\xiaoya_meta\\all http://xiaoya.host http://192.168.11.2",
+      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" J:\\xiaoya_meta\\all -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
     },
     "strm_output_teststrm": {
       "commandName": "Project",
-      "commandLineArgs": "--strm testfiles\\output\\teststrm",
+      "commandLineArgs": "--strm testfiles\\output\\teststrm -R http://192.168.11.2 http://istoreos -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
     },
     "sync_testdir7z_output": {
       "commandName": "Project",
-      "commandLineArgs": "--sync testfiles\\testdir.7z testfiles\\output http://xiaoya.host http://192.168.11.2",
+      "commandLineArgs": "--sync testfiles\\testdir.7z testfiles\\output -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
     },
     "sync_xiaoya_output": {
       "commandName": "Project",
-      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" ./testfiles/output/all http://xiaoya.host http://192.168.11.2",
+      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" ./testfiles/output/all -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
     }
   }
