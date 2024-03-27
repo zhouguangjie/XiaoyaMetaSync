@@ -3,7 +3,6 @@ using SharpCompress.Archives.SevenZip;
 using SharpCompress.Common;
 using SharpCompress.Readers;
 using System.Text;
-using System.Web;
 
 namespace XiaoyaMetaSync
 {
@@ -459,7 +458,6 @@ namespace XiaoyaMetaSync
                     newContent = newContent.Replace(entry.Key, entry.Value);
                 }
             }
-            newContent = HttpUtility.UrlDecode(newContent);
             return newContent != content;
         }
     }

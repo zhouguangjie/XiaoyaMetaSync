@@ -21,4 +21,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="testfiles\output\all\" />
+  </ItemGroup>
+
 </Project>
