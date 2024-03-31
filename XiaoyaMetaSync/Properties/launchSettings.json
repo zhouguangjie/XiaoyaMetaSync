@@ -28,6 +28,11 @@
       "commandName": "Project",
       "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" ./testfiles/output/all -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
+    },
+    "genstrm_xiaoya_output": {
+      "commandName": "Project",
+      "commandLineArgs": "--genstrm \"Z:\\xiaoya\\每日更新\\电影\\戛纳电影节\" \"http://istoreos:5688/每日更新/电影/戛纳电影节\" .\\testfiles\\output\\testgenstrm\\",
+      "workingDirectory": "."
     }
   }
 }

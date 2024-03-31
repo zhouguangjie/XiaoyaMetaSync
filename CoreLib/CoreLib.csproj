@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="SevenZipExtractor" Version="1.0.17" />
+		<PackageReference Include="SharpCompress" Version="0.36.0" />
+		<PackageReference Include="Squid-Box.SevenZipSharp.Lite" Version="1.6.1.23" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="dll\7z.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>
