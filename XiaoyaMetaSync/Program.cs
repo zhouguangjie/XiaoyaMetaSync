@@ -21,7 +21,7 @@ namespace XiaoyaMetaSync
 
         private static void PrintHelpGenStrm()
         {
-            Console.WriteLine("Usage: --genstrm <media path> <url prefix> <output>");
+            Console.WriteLine("Usage: --genstrm <media path> <url prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url]");
         }
 
         static void Main(string[] args)
@@ -59,7 +59,7 @@ namespace XiaoyaMetaSync
             var mediaRootPath = args[1];
             var urlPrefix = args[2];
             var outputPath = args[3];
-            XiaoYaMetaSync.RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outputPath, false, true);
+            XiaoYaMetaSync.RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"));
         }
 
 
