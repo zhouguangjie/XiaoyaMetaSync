@@ -59,7 +59,7 @@ namespace XiaoyaMetaSync
             var mediaRootPath = args[1];
             var urlPrefix = args[2];
             var outputPath = args[3];
-            XiaoYaMetaSync.RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"));
+            XiaoYaMetaSync.StartRecursiveSyncMediaToStrm(mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"), args.Contains("--strm_keep_filetype"));
         }
 
 

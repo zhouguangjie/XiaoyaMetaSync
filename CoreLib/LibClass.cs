@@ -248,7 +248,13 @@ namespace XiaoyaMetaSync.CoreLib
         }
 
 
-        public static void RecursiveSyncMediaToStrm(string mediaRootPath, string currentPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl)
+        public static void StartRecursiveSyncMediaToStrm(string mediaRootPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension)
+        {
+            urlPrefix = urlPrefix.Trim("/\\".ToArray());
+            RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension);
+        }
+
+        private static void RecursiveSyncMediaToStrm(string mediaRootPath, string currentPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension)
         {
             if (Directory.Exists(currentPath))
             {
@@ -260,7 +266,12 @@ namespace XiaoyaMetaSync.CoreLib
                     var fileExtension = Path.GetExtension(file);
                     if (MEDIA_FILE_LIST.Contains(fileExtension))
                     {
-                        outputFile += ".strm";
+                        if (strmKeepFileExtension)
+                            outputFile += ".strm";
+                        else
+                            outputFile = Path.Combine(Directory.GetParent(outputFile).FullName, Path.GetFileNameWithoutExtension(outputFile) + ".strm");
+
+
                         if (rewriteStrm || !File.Exists(outputFile))
                         {
                             GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl);
@@ -291,14 +302,18 @@ namespace XiaoyaMetaSync.CoreLib
                 var dirs = Directory.GetDirectories(currentPath);
                 foreach (var dir in dirs)
                 {
-                    RecursiveSyncMediaToStrm(mediaRootPath, dir, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl);
+                    RecursiveSyncMediaToStrm(mediaRootPath, dir, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension);
                 }
+            }
+            else
+            {
+                Console.WriteLine($"[Path Not Found] {currentPath}");
             }
         }
 
         private static void GenerateStrm(string urlPrefix, string outputFile, string relativeFile, bool encodeStrmUrl)
         {
-            var url = $"{urlPrefix}/{relativeFile.Replace("\\", "/")}";
+            var url = $"{urlPrefix}/{relativeFile}".Replace("\\", "/");
             if (encodeStrmUrl) url = HttpUtility.UrlEncode(url);
             Directory.CreateDirectory(Directory.GetParent(outputFile).FullName);
             File.WriteAllText(outputFile, url);

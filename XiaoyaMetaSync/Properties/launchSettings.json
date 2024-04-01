@@ -31,7 +31,7 @@
     },
     "genstrm_xiaoya_output": {
       "commandName": "Project",
-      "commandLineArgs": "--genstrm \"Z:\\xiaoya\\每日更新\\电影\\戛纳电影节\" \"http://istoreos:5688/d/每日更新/电影/戛纳电影节\" .\\testfiles\\output\\testgenstrm\\ --rewrite_strm",
+      "commandLineArgs": "--genstrm \"Z:\\xiaoya\\每日更新\\电影\\戛纳电影节\" \"http://istoreos:5688/d/每日更新\\电影\\戛纳电影节\" .\\testfiles\\output\\testgenstrm\\ --rewrite_strm",
       "workingDirectory": "."
     }
   }
