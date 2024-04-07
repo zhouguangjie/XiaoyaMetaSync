@@ -3,11 +3,11 @@
 
 ### 使用方法
 下载最新[Release](https://github.com/zhouguangjie/XiaoyaMetaSync/releases/latest)，解压，写批处理或使用计划任务调用。  
-命令格式：`.\XiaoyaMetaSync.exe 功能 <必要参数>[可选参数]`
+命令格式：`.\XiaoyaMetaSync.exe 功能 <必要参数>[可选参数]`  
 每次调用都会生成日志，路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  
 
 #### 导出元数据到指定路径：--sync
-`.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <解压路径> [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`
+`.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <解压路径> [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`  
 
 例如以下命令是把下载的元数据all.mp4导出到Y:\all文件夹，并替换小雅alist地址：  
 `.\XiaoyaMetaSync.exe --sync "D:\Downloads\all.mp4" "Y:\all" -R "http://xiaoya.host:5678" "http://istoreos:5688"`
@@ -19,10 +19,10 @@
 `.\XiaoyaMetaSync.exe --strm "Y:\all" -R "http://xiaoya.host:5678" "http://istoreos:5688"`
 
 #### 复制元数据并为媒体文件生成strm：--genstrm
-`.\XiaoyaMetaSync.exe --genstrm <alist挂载到本地的路径> <alist对应的url前缀> <输出路径> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url]`
+`.\XiaoyaMetaSync.exe --genstrm <alist挂载到本地的路径> <alist对应的url前缀> <输出路径> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url]`  
 
 例如为每日更新的所有视频文件生成strm：   
-`.\XiaoyaMetaSync.exe --genstrm "Z:\xiaoya\每日更新" "http://istoreos:5688/d/每日更新" "D:\xiaoya_meta\meta_sync\每日更新" --only_strm`
+`.\XiaoyaMetaSync.exe --genstrm "Z:\xiaoya\每日更新" "http://istoreos:5688/d/每日更新" "D:\xiaoya_meta\meta_sync\每日更新" --only_strm`  
 
 可选参数说明：  
 --only_strm：只为视频文件生成strm，不复制其他元数据等文件  
