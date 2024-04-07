@@ -4,6 +4,7 @@
 ### 使用方法
 下载最新[Release](https://github.com/zhouguangjie/XiaoyaMetaSync/releases/latest)，解压，写批处理或使用计划任务调用。  
 命令格式：`.\XiaoyaMetaSync.exe 功能 <必要参数>[可选参数]`
+每次调用都会生成日志，路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  
 
 #### 导出元数据到指定路径：--sync
 `.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <解压路径> [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`
