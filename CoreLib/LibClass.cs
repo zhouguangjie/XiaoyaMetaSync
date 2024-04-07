@@ -3,6 +3,7 @@ using SharpCompress.Archives;
 using SharpCompress.Archives.SevenZip;
 using SharpCompress.Common;
 using SharpCompress.Readers;
+using System.Net;
 using System.Text;
 using System.Web;
 
@@ -314,7 +315,7 @@ namespace XiaoyaMetaSync.CoreLib
         private static void GenerateStrm(string urlPrefix, string outputFile, string relativeFile, bool encodeStrmUrl)
         {
             var url = $"{urlPrefix}/{relativeFile}".Replace("\\", "/");
-            if (encodeStrmUrl) url = HttpUtility.UrlEncode(url);
+            if (encodeStrmUrl) url = Uri.EscapeUriString(url);
             Directory.CreateDirectory(Directory.GetParent(outputFile).FullName);
             File.WriteAllText(outputFile, url);
         }
