@@ -56,10 +56,15 @@ namespace XiaoyaMetaSync
                 PrintHelpGenStrm();
                 return;
             }
+            var startDate = DateTime.Now;
             var mediaRootPath = args[1];
             var urlPrefix = args[2];
             var outputPath = args[3];
+            CommonLogger.NewLog();
+            CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
             XiaoYaMetaSync.StartRecursiveSyncMediaToStrm(mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"), args.Contains("--strm_keep_filetype"));
+            var duration = DateTime.Now - startDate;
+            CommonLogger.LogLine($"GenStrm Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
         }
 
 
@@ -73,8 +78,8 @@ namespace XiaoyaMetaSync
             CommonLogger.NewLog();
             var replacements = GetReplacements(args);
             var report = StrmFileHelper.ProcessStrm(args[1], true, StrmAdapt2Kodi(args), replacements);
-            CommonLogger.LogLine($"Matched:{report.MatchFiles}, Processed:{report.Replaced}", true);
-            CommonLogger.LogLine($"Finish:{report.StartTime} --> {report.EndTime}, Duration: {report.Duration}", true);
+            CommonLogger.LogLine($"Strm Matched:{report.MatchFiles}, Processed:{report.Replaced}", true);
+            CommonLogger.LogLine($"Process Finish:{report.StartTime} --> {report.EndTime}, Duration: {report.Duration}", true);
         }
 
         private static List<KeyValuePair<string, string>> GetReplacements(string[] args)
@@ -122,11 +127,10 @@ namespace XiaoyaMetaSync
             try
             {
                 var startDate = DateTime.Now;
-                CommonLogger.LogLine($"Start:{DateTime.Now}", true);
-
+                CommonLogger.LogLine($"Sync Start:{DateTime.Now}", true);
                 XiaoYaMetaSync.Sync(zipPath, extractPath, StrmAdapt2Kodi(args), replacments);
                 var duration = DateTime.Now - startDate;
-                CommonLogger.LogLine($"Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
+                CommonLogger.LogLine($"Sync Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
             }
             catch (Exception ex)
             {

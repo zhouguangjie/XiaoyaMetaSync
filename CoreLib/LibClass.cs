@@ -275,7 +275,7 @@ namespace XiaoyaMetaSync.CoreLib
                         if (rewriteStrm || !File.Exists(outputFile))
                         {
                             GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl);
-                            Console.WriteLine($"[STRM] {outputFile}");
+                            CommonLogger.LogLine($"[STRM] {outputFile}", true);
                         }
                         else
                         {
