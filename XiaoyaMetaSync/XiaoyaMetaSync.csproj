@@ -8,8 +8,8 @@
 		<PublishAot>False</PublishAot>
 		<InvariantGlobalization>true</InvariantGlobalization>
 		<FileVersion>1.0.0</FileVersion>
-		<AssemblyVersion>0.1.0</AssemblyVersion>
-		<Version>0.1.0</Version>
+		<AssemblyVersion>0.1.1</AssemblyVersion>
+		<Version>0.1.1</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
