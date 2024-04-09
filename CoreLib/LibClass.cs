@@ -1,11 +1,4 @@
-﻿
-using SharpCompress.Archives;
-using SharpCompress.Archives.SevenZip;
-using SharpCompress.Common;
-using SharpCompress.Readers;
-using System.Net;
-using System.Text;
-using System.Web;
+﻿using System.Text;
 
 namespace XiaoyaMetaSync.CoreLib
 {
@@ -33,12 +26,16 @@ namespace XiaoyaMetaSync.CoreLib
         private static int cnt = 0;
         private static int fileCnt = 0;
         private static int newFileCnt = 0;
+        public static bool WriteFileAsync { get; set; } = true;
         public static void Sync(string metaZipPath, string xiaoyaMetaOutputPath, bool kodiFix, IEnumerable<KeyValuePair<string, string>> replacements)
         {
             //SyncTooSlow(metaZipPath, xiaoyaMetaOutputPath, kodiFix, replacements);
             //SyncSlow(metaZipPath, xiaoyaMetaOutputPath, kodiFix, replacements);
             SyncFast(metaZipPath, xiaoyaMetaOutputPath, kodiFix, replacements);
         }
+
+        #region DeprecatedMethods
+        /*
         private static void SyncTooSlow(string metaZipPath, string xiaoyaMetaOutputPath, bool kodiFix, IEnumerable<KeyValuePair<string, string>> replacements)
         {
             var replaceStrm = replacements != null && replacements.Count() > 0;
@@ -179,6 +176,8 @@ namespace XiaoyaMetaSync.CoreLib
 
             CommonLogger.LogLine($"Total:{totalEntry}, Effective File:{fileCnt}, New:{newFileCnt}", true);
         }
+        */
+        #endregion
         private static void SyncFast(string metaZipPath, string xiaoyaMetaOutputPath, bool kodiFix, IEnumerable<KeyValuePair<string, string>> replacements)
         {
             var replaceStrm = replacements != null && replacements.Count() > 0;
@@ -221,11 +220,17 @@ namespace XiaoyaMetaSync.CoreLib
 
                                 if (StrmFileHelper.ProcesStrmFileContent(strmContent, kodiFix, replacements, out string newContent))
                                 {
-                                    File.WriteAllText(extractedFilePath, newContent);
+                                    if (WriteFileAsync)
+                                        File.WriteAllTextAsync(extractedFilePath, newContent);
+                                    else
+                                        File.WriteAllText(extractedFilePath, newContent);
                                 }
                                 else
                                 {
-                                    File.WriteAllText(extractedFilePath, strmContent);
+                                    if (WriteFileAsync)
+                                        File.WriteAllTextAsync(extractedFilePath, strmContent);
+                                    else
+                                        File.WriteAllText(extractedFilePath, strmContent);
                                 }
                             }
                             else
@@ -233,7 +238,10 @@ namespace XiaoyaMetaSync.CoreLib
                                 writeFileStream.Seek(0, SeekOrigin.Begin);
                                 var buf = new byte[entry.Size];
                                 writeFileStream.Read(buf, 0, buf.Length);
-                                File.WriteAllBytes(extractedFilePath, buf);
+                                if (WriteFileAsync)
+                                    File.WriteAllBytesAsync(extractedFilePath, buf);
+                                else
+                                    File.WriteAllBytes(extractedFilePath, buf);
                             }
                             newFileCnt++;
                             Console.WriteLine($"[{cnt}/{totalEntry}]Stored:{relativeFileName}");
@@ -247,8 +255,6 @@ namespace XiaoyaMetaSync.CoreLib
 
             CommonLogger.LogLine($"Total:{totalEntry}, Effective File:{fileCnt}, New:{newFileCnt}", true);
         }
-
-
         public static void StartRecursiveSyncMediaToStrm(string mediaRootPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension)
         {
             urlPrefix = urlPrefix.Trim("/\\".ToArray());
@@ -317,7 +323,11 @@ namespace XiaoyaMetaSync.CoreLib
             var url = $"{urlPrefix}/{relativeFile}".Replace("\\", "/");
             if (encodeStrmUrl) url = Uri.EscapeUriString(url);
             Directory.CreateDirectory(Directory.GetParent(outputFile).FullName);
-            File.WriteAllText(outputFile, url);
+            if (WriteFileAsync)
+                File.WriteAllTextAsync(outputFile, url);
+            else
+                File.WriteAllText(outputFile, url);
+
         }
     }
 
@@ -401,7 +411,10 @@ namespace XiaoyaMetaSync.CoreLib
             var content = File.ReadAllText(filePath);
             if (ProcesStrmFileContent(content, kodiFix, replacements, out string newContent))
             {
-                File.WriteAllText(filePath, newContent);
+                if (XiaoYaMetaSync.WriteFileAsync)
+                    File.WriteAllTextAsync(filePath, newContent);
+                else
+                    File.WriteAllText(filePath, newContent);
                 return true;
             }
             return false;
@@ -440,6 +453,7 @@ namespace XiaoyaMetaSync.CoreLib
         }
     }
 
+    #region XiaoyaMetaZipStream
     class XiaoyaMetaZipStream : Stream
     {
         private FileStream fsInput;
@@ -515,4 +529,5 @@ namespace XiaoyaMetaSync.CoreLib
             //fsInput.Write(buffer, offset, count);
         }
     }
+    #endregion
 }
