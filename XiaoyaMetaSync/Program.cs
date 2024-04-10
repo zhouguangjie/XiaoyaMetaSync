@@ -8,8 +8,19 @@ namespace XiaoyaMetaSync
             PrintHelpSync();
             PrintHelpStrm();
             PrintHelpGenStrm();
+            PrintHelpClearLog();
+            PrintHelpRemoveExpiredMeta();
         }
 
+        private static void PrintHelpRemoveExpiredMeta()
+        {
+            Console.WriteLine("Usage: --remove_expired_meta <xiaoya meta zip> <output path>");
+        }
+
+        private static void PrintHelpClearLog()
+        {
+            Console.WriteLine("Usage: --clear_log");
+        }
         private static void PrintHelpSync()
         {
             Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [--kodi] [<--replace|-R> <strm file old string> <strm file new string>]...");
@@ -40,6 +51,8 @@ namespace XiaoyaMetaSync
                     case "--sync": CmdSync(args); break;
                     case "--strm": CmdStrm(args); break;
                     case "--genstrm": CmdGetStrm(args); break;
+                    case "--clear_log": CmdClearLog(args); break;
+                    case "--remove_expired_meta": CmdRemoveExpiredMeta(args); break;
                     default: PrintHelp(); break;
                 }
             }
@@ -47,6 +60,13 @@ namespace XiaoyaMetaSync
             {
                 Console.WriteLine(ex.Message);
             }
+        }
+
+
+        private static void CmdClearLog(string[] args)
+        {
+            CommonLogger.ClearLog();
+            Console.WriteLine("Clear Logs Finished");
         }
 
         private static void CmdGetStrm(string[] args)
@@ -131,6 +151,39 @@ namespace XiaoyaMetaSync
                 XiaoYaMetaSync.Sync(zipPath, extractPath, StrmAdapt2Kodi(args), replacments);
                 var duration = DateTime.Now - startDate;
                 CommonLogger.LogLine($"Sync Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
+            }
+            catch (Exception ex)
+            {
+                CommonLogger.LogLine(ex.Message, true);
+                CommonLogger.LogLine(ex.ToString(), true);
+            }
+        }
+
+        private static void CmdRemoveExpiredMeta(string[] args)
+        {
+            if (args.Length < 3)
+            {
+                PrintHelpRemoveExpiredMeta();
+                return;
+            }
+
+            var zipPath = args[1];
+            var extractPath = args[2];
+            if (!File.Exists(zipPath))
+            {
+                Console.WriteLine($"Zip File Not Exists:{zipPath}");
+                return;
+            }
+            CommonLogger.NewLog();
+            CommonLogger.LogLine($"ZipPath:{zipPath}", true);
+            CommonLogger.LogLine($"MetaOutput:{extractPath}", true);
+            try
+            {
+                var startDate = DateTime.Now;
+                CommonLogger.LogLine($"Remove Expired Meta Start:{DateTime.Now}", true);
+                XiaoYaMetaSync.RemoveExpiredMeta(zipPath, extractPath);
+                var duration = DateTime.Now - startDate;
+                CommonLogger.LogLine($"Remove Expired Meta Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
             }
             catch (Exception ex)
             {

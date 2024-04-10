@@ -7,7 +7,7 @@
 每次调用都会生成日志，路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  
 
 #### 导出元数据到指定路径：--sync
-`.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <解压路径> [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`  
+`.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <元数据输出路径> [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`  
 
 例如以下命令是把下载的元数据all.mp4导出到Y:\all文件夹，并替换小雅alist地址：  
 `.\XiaoyaMetaSync.exe --sync "D:\Downloads\all.mp4" "Y:\all" -R "http://xiaoya.host:5678" "http://istoreos:5688"`
@@ -30,3 +30,10 @@
 --rewrite_strm：覆盖输出路径已经存在strm文件  
 --encode_url：对生成的strm文件的url进行编码  
 
+#### 删除不存在于压缩包里的元数据文件夹：--remove_expired_meta
+`.\XiaoyaMetaSync.exe --remove_expired_meta <小雅元数据压缩包文件路径> <元数据路径>`  
+
+比如新版压缩包某个文件夹已经删除或改名，用本方法可以删除元数据里的多余文件夹
+
+#### 清理日志：--clear_log
+日志路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  

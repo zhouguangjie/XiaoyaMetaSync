@@ -13,10 +13,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\CoreLib\CoreLib.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="testfiles\output\all\" />
+		<ProjectReference Include="..\CoreLib\CoreLib.csproj" />
 	</ItemGroup>
 </Project>
