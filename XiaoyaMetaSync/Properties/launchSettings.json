@@ -4,16 +4,6 @@
       "commandName": "WSL2",
       "distributionName": ""
     },
-    "sync_xiaoya_produce": {
-      "commandName": "Project",
-      "commandLineArgs": "--sync G:\\Workspace\\XiaoyaSpace\\all.zip Y:\\all -R http://xiaoya.host http://istoreos",
-      "workingDirectory": "."
-    },
-    "sync_xiaoya_drivej": {
-      "commandName": "Project",
-      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" J:\\xiaoya_meta\\all -R http://xiaoya.host http://istoreos",
-      "workingDirectory": "."
-    },
     "strm_output_teststrm": {
       "commandName": "Project",
       "commandLineArgs": "--strm testfiles\\output\\teststrm -R http://192.168.11.2 http://istoreos -R http://xiaoya.host http://istoreos",
@@ -26,7 +16,7 @@
     },
     "sync_xiaoya_output": {
       "commandName": "Project",
-      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" ./testfiles/output/all -R http://xiaoya.host http://istoreos",
+      "commandLineArgs": "--sync \"G:\\Workspace\\XiaoyaSpace\\all.zip\" ./testfiles/output/all  --ignore ./testfiles/output/ignore.txt -R http://xiaoya.host http://istoreos",
       "workingDirectory": "."
     },
     "genstrm_xiaoya_output": {

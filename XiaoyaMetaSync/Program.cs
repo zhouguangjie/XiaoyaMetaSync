@@ -23,11 +23,11 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpSync()
         {
-            Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [--kodi] [<--replace|-R> <strm file old string> <strm file new string>]...");
+            Console.WriteLine("Usage: --sync <xiaoya meta zip> <output path> [--ignore <ignore relative path config file>] [<--replace|-R> <strm file old string> <strm file new string>]...");
         }
         private static void PrintHelpStrm()
         {
-            Console.WriteLine("Usage: --strm <dir> [--kodi] [<--replace|-R> <strm file old string> <strm file new string>]...");
+            Console.WriteLine("Usage: --strm <dir> [<--replace|-R> <strm file old string> <strm file new string>]...");
         }
 
         private static void PrintHelpGenStrm()
@@ -82,7 +82,7 @@ namespace XiaoyaMetaSync
             var outputPath = args[3];
             CommonLogger.NewLog();
             CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
-            XiaoYaMetaSync.StartRecursiveSyncMediaToStrm(mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"), args.Contains("--strm_keep_filetype"));
+            new XiaoYaMetaSync().StartRecursiveSyncMediaToStrm(mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"), args.Contains("--strm_keep_filetype"));
             var duration = DateTime.Now - startDate;
             CommonLogger.LogLine($"GenStrm Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
         }
@@ -97,7 +97,7 @@ namespace XiaoyaMetaSync
             }
             CommonLogger.NewLog();
             var replacements = GetReplacements(args);
-            var report = StrmFileHelper.ProcessStrm(args[1], true, StrmAdapt2Kodi(args), replacements);
+            var report = StrmFileHelper.ProcessStrm(args[1], true, replacements);
             CommonLogger.LogLine($"Strm Matched:{report.MatchFiles}, Processed:{report.Replaced}", true);
             CommonLogger.LogLine($"Process Finish:{report.StartTime} --> {report.EndTime}, Duration: {report.Duration}", true);
         }
@@ -148,7 +148,9 @@ namespace XiaoyaMetaSync
             {
                 var startDate = DateTime.Now;
                 CommonLogger.LogLine($"Sync Start:{DateTime.Now}", true);
-                XiaoYaMetaSync.Sync(zipPath, extractPath, StrmAdapt2Kodi(args), replacments);
+                var sync = new XiaoYaMetaSync();
+                if (TryGetIgnoreConfigFile(args, out string file)) sync.AddIgnoreRelativePathsFromFile(file);
+                sync.Sync(zipPath, extractPath, replacments);
                 var duration = DateTime.Now - startDate;
                 CommonLogger.LogLine($"Sync Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
             }
@@ -157,6 +159,34 @@ namespace XiaoyaMetaSync
                 CommonLogger.LogLine(ex.Message, true);
                 CommonLogger.LogLine(ex.ToString(), true);
             }
+        }
+
+        private static bool TryGetIgnoreConfigFile(string[] args, out string file)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--ignore")
+                {
+                    if (i + 1 < args.Length)
+                    {
+                        file = args[i + 1];
+                        if (File.Exists(file))
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Specific File Not Exists: --ignore {file}");
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Required argument: --ignore <ignore relative path config file>");
+                    }
+                }
+            }
+            file = null;
+            return false;
         }
 
         private static void CmdRemoveExpiredMeta(string[] args)
@@ -181,7 +211,7 @@ namespace XiaoyaMetaSync
             {
                 var startDate = DateTime.Now;
                 CommonLogger.LogLine($"Remove Expired Meta Start:{DateTime.Now}", true);
-                XiaoYaMetaSync.RemoveExpiredMeta(zipPath, extractPath);
+                new XiaoYaMetaSync().RemoveExpiredMeta(zipPath, extractPath);
                 var duration = DateTime.Now - startDate;
                 CommonLogger.LogLine($"Remove Expired Meta Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
             }

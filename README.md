@@ -7,7 +7,11 @@
 每次调用都会生成日志，路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  
 
 #### 导出元数据到指定路径：--sync
-`.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <元数据输出路径> [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`  
+`.\XiaoyaMetaSync.exe --sync <小雅元数据压缩包文件路径> <元数据输出路径> [--ignore <忽略路径列表文件>] [-R <查找1> <替换1>] [-R <查找2> <替换2>]...`  
+  
+可选参数说明：
+`--replace|-R <查找1> <替换1>`: 替换strm里的文本，该参数在其他命令里功能一样  
+`--ignore <忽略路径列表文件>`: 指定一个列表文本，每行是压缩包里的一个相对路径，解压时会忽略这个路径下的所有文件  
 
 例如以下命令是把下载的元数据all.mp4导出到Y:\all文件夹，并替换小雅alist地址：  
 `.\XiaoyaMetaSync.exe --sync "D:\Downloads\all.mp4" "Y:\all" -R "http://xiaoya.host:5678" "http://istoreos:5688"`
@@ -25,15 +29,15 @@
 `.\XiaoyaMetaSync.exe --genstrm "Z:\xiaoya\每日更新" "http://istoreos:5688/d/每日更新" "D:\xiaoya_meta\meta_sync\每日更新" --only_strm`  
 
 可选参数说明：  
---only_strm：只为视频文件生成strm，不复制其他元数据等文件  
---rewrite_meta：覆盖输出路径已经存在的元数据文件  
---rewrite_strm：覆盖输出路径已经存在strm文件  
---encode_url：对生成的strm文件的url进行编码  
+`--only_strm`：只为视频文件生成strm，不复制其他元数据等文件  
+`--rewrite_meta`：覆盖输出路径已经存在的元数据文件  
+`--rewrite_strm`：覆盖输出路径已经存在strm文件  
+`--encode_url`：对生成的strm文件的url进行编码  
 
 #### 删除不存在于压缩包里的元数据文件夹：--remove_expired_meta
 `.\XiaoyaMetaSync.exe --remove_expired_meta <小雅元数据压缩包文件路径> <元数据路径>`  
 
-比如新版压缩包某个文件夹已经删除或改名，用本方法可以删除元数据里的多余文件夹
+当新版压缩包某个文件夹已经删除或改名，用本方法可以删除元数据里的多余文件夹
 
 #### 清理日志：--clear_log
 日志路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  
