@@ -123,6 +123,7 @@
             if (ProcesStrmFileContent(content, replacements, out string newContent))
             {
                 File.WriteAllTextAsync(filePath, newContent);
+                return true;
             }
             return false;
         }
