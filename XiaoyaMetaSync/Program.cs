@@ -82,11 +82,49 @@ namespace XiaoyaMetaSync
             var outputPath = args[3];
             CommonLogger.NewLog();
             CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
-            new XiaoYaMetaSync().StartRecursiveSyncMediaToStrm(mediaRootPath, urlPrefix, outputPath, args.Contains("--only_strm"), args.Contains("--rewrite_meta"), args.Contains("--rewrite_strm"), args.Contains("--encode_url"), args.Contains("--strm_keep_filetype"));
+
+
+            new XiaoYaMetaSync().StartRecursiveSyncMediaToStrm(mediaRootPath,
+                urlPrefix,
+                outputPath,
+                args.Contains("--only_strm"),
+                args.Contains("--rewrite_meta"),
+                args.Contains("--rewrite_strm"),
+                args.Contains("--encode_url"),
+                args.Contains("--strm_keep_filetype"),
+                GetOutputPathRegexReplacement(args));
+
             var duration = DateTime.Now - startDate;
             CommonLogger.LogLine($"GenStrm Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
         }
 
+        private static KeyValuePair<string, string>[] GetOutputPathRegexReplacement(string[] args)
+        {
+            var res = new List<KeyValuePair<string, string>>();
+            try
+            {
+                var renameConf = GetFollowArgs(args, "--output_remap", 1)[0];
+                var lines = File.ReadAllLines(renameConf);
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var kv = line.Split('>');
+                    if (kv.Length > 1)
+                    {
+                        res.Add(new KeyValuePair<string, string>(kv[0], kv[1]));
+                    }
+                    else if (kv.Length > 0)
+                    {
+                        res.Add(new KeyValuePair<string, string>(kv[0], ""));
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+            }
+            return res.Count > 0 ? res.ToArray() : null;
+        }
 
         private static void CmdStrm(string[] args)
         {
@@ -117,6 +155,41 @@ namespace XiaoyaMetaSync
                     else
                     {
                         throw new ArgumentException("Required argument: --replace <old string> <new string>");
+                    }
+                }
+
+            }
+            return res;
+        }
+
+        private static List<string> GetFollowArgs(string[] args, string matches, int follows)
+        {
+            return GetFollowArgs(args, 0, new string[] { matches }, follows);
+        }
+
+        private static List<string> GetFollowArgs(string[] args, int start, string matches, int follows)
+        {
+            return GetFollowArgs(args, start, new string[] { matches }, follows);
+        }
+
+        private static List<string> GetFollowArgs(string[] args, int start, string[] matches, int follows)
+        {
+            var res = new List<string>();
+            for (int i = start; i < args.Length; i++)
+            {
+                var cur = args[i];
+                if (matches.Contains(cur))
+                {
+                    if (args.Length > i + follows)
+                    {
+                        for (int j = 0; j < follows; j++)
+                        {
+                            res.Add(args[i + 1 + j]);
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Required follow arguments[{follows}]: --{string.Join('|', matches)}");
                     }
                 }
 

@@ -13,6 +13,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="testfiles\output\**" />
+	  <EmbeddedResource Remove="testfiles\output\**" />
+	  <None Remove="testfiles\output\**" />
 	</ItemGroup>
 
 	<ItemGroup>

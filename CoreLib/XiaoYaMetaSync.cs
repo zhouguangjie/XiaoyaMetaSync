@@ -45,13 +45,13 @@ namespace XiaoyaMetaSync.CoreLib
                         else
                         {
                             var dir = Path.GetDirectoryName(extractedFilePath);
-                            
+
                             if (IsIgnoreFile(xiaoyaMetaOutputPath, relativeFileName))
                             {
                                 Console.WriteLine($"[{cnt}/{totalEntry}]Ignored Path Files:{relativeFileName}");
                                 continue;
                             }
-                            
+
                             if (!Directory.Exists(dir))
                                 Directory.CreateDirectory(dir);
 
@@ -146,13 +146,13 @@ namespace XiaoyaMetaSync.CoreLib
             return false;
         }
 
-        public void StartRecursiveSyncMediaToStrm(string mediaRootPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension)
+        public void StartRecursiveSyncMediaToStrm(string mediaRootPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension, KeyValuePair<string, string>[] outputPathRegexReplacements)
         {
             urlPrefix = urlPrefix.Trim("/\\".ToArray());
-            RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension);
+            RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension, outputPathRegexReplacements);
         }
 
-        private void RecursiveSyncMediaToStrm(string mediaRootPath, string currentPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension)
+        private void RecursiveSyncMediaToStrm(string mediaRootPath, string currentPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension, KeyValuePair<string, string>[] outputPathRegexReplacements)
         {
             if (Directory.Exists(currentPath))
             {
@@ -160,7 +160,8 @@ namespace XiaoyaMetaSync.CoreLib
                 foreach (var file in files)
                 {
                     var relativeFile = Path.GetRelativePath(mediaRootPath, file);
-                    var outputFile = Path.Combine(outpuPath, relativeFile);
+                    var outputRelativeFile = CommonUtility.AdaptWindowsFileName(RemapOutputPath(outputPathRegexReplacements, relativeFile));
+                    var outputFile = Path.Combine(outpuPath, outputRelativeFile); 
                     var fileExtension = Path.GetExtension(file);
                     if (MEDIA_FILE_LIST.Contains(fileExtension))
                     {
@@ -200,13 +201,26 @@ namespace XiaoyaMetaSync.CoreLib
                 var dirs = Directory.GetDirectories(currentPath);
                 foreach (var dir in dirs)
                 {
-                    RecursiveSyncMediaToStrm(mediaRootPath, dir, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension);
+                    RecursiveSyncMediaToStrm(mediaRootPath, dir, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension, outputPathRegexReplacements);
                 }
             }
             else
             {
                 Console.WriteLine($"[Path Not Found] {currentPath}");
             }
+        }
+
+        private static string RemapOutputPath(KeyValuePair<string, string>[] outputPathRegexReplacements, string outputFile)
+        {
+            if (outputPathRegexReplacements != null && outputPathRegexReplacements.Length > 0)
+            {
+                foreach (var nameReplacement in outputPathRegexReplacements)
+                {
+                    outputFile = outputFile.Replace(nameReplacement.Key, nameReplacement.Value);
+                }
+            }
+
+            return outputFile;
         }
 
         private void GenerateStrm(string urlPrefix, string outputFile, string relativeFile, bool encodeStrmUrl)
