@@ -34,18 +34,26 @@
     {
         public static string AdaptWindowsFileName(string filename)
         {
-            return filename.Replace('|', '_')
+            filename = filename.Replace('|', '_')
                 .Replace('"', '_')
                 .Replace('*', '_')
                 .Replace('<', '_')
                 .Replace('>', '_')
                 .Replace('?', '_')
                 .Replace(':', '_')
-                .Replace(" \\", "\\")
-                .Replace(" /", "/")
-                .Replace("\\ ", "\\")
-                .Replace("/ ", "/")
                 .Trim();
+
+            var pathElements = filename.Split(['/', '\\']);
+            var path = filename.StartsWith('/') ? "/" : (filename.StartsWith('\\') ? "\\" : "");
+            foreach (var item in pathElements)
+            {
+                var trimmed = item.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                {
+                    path = Path.Combine(path, trimmed);
+                }
+            }
+            return path;
         }
     }
 

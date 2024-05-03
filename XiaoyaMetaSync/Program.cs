@@ -103,7 +103,7 @@ namespace XiaoyaMetaSync
             var res = new List<KeyValuePair<string, string>>();
             try
             {
-                var renameConf = GetFollowArgs(args, "--output_remap", 1)[0];
+                var renameConf = GetFollowArgs(args, "--path_remap", 1)[0];
                 var lines = File.ReadAllLines(renameConf);
                 foreach (var line in lines)
                 {

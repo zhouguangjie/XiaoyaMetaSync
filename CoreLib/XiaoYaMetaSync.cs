@@ -1,5 +1,6 @@
 ﻿using SevenZipExtractor;
 using System.Text;
+using System.Text.RegularExpressions;
 namespace XiaoyaMetaSync.CoreLib
 {
     public class XiaoYaMetaSync
@@ -152,7 +153,7 @@ namespace XiaoyaMetaSync.CoreLib
             RecursiveSyncMediaToStrm(mediaRootPath, mediaRootPath, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension, outputPathRegexReplacements);
         }
 
-        private void RecursiveSyncMediaToStrm(string mediaRootPath, string currentPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension, KeyValuePair<string, string>[] outputPathRegexReplacements)
+        private void RecursiveSyncMediaToStrm(string mediaRootPath, string currentPath, string urlPrefix, string outpuPath, bool generateStrmOnly, bool rewriteMetaFiles, bool rewriteStrm, bool encodeStrmUrl, bool strmKeepFileExtension, KeyValuePair<string, string>[] pathRegexReplacements)
         {
             if (Directory.Exists(currentPath))
             {
@@ -160,8 +161,10 @@ namespace XiaoyaMetaSync.CoreLib
                 foreach (var file in files)
                 {
                     var relativeFile = Path.GetRelativePath(mediaRootPath, file);
-                    var outputRelativeFile = CommonUtility.AdaptWindowsFileName(RemapOutputPath(outputPathRegexReplacements, relativeFile));
-                    var outputFile = Path.Combine(outpuPath, outputRelativeFile); 
+                    var relativePath = Path.GetDirectoryName(relativeFile);
+                    var flename = Path.GetFileName(relativeFile);
+                    var outputRelativeFile = CommonUtility.AdaptWindowsFileName(RemapOutputPath(pathRegexReplacements, relativePath));
+                    var outputFile = Path.Combine(outpuPath, outputRelativeFile, flename);
                     var fileExtension = Path.GetExtension(file);
                     if (MEDIA_FILE_LIST.Contains(fileExtension))
                     {
@@ -201,7 +204,7 @@ namespace XiaoyaMetaSync.CoreLib
                 var dirs = Directory.GetDirectories(currentPath);
                 foreach (var dir in dirs)
                 {
-                    RecursiveSyncMediaToStrm(mediaRootPath, dir, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension, outputPathRegexReplacements);
+                    RecursiveSyncMediaToStrm(mediaRootPath, dir, urlPrefix, outpuPath, generateStrmOnly, rewriteMetaFiles, rewriteStrm, encodeStrmUrl, strmKeepFileExtension, pathRegexReplacements);
                 }
             }
             else
@@ -216,7 +219,18 @@ namespace XiaoyaMetaSync.CoreLib
             {
                 foreach (var nameReplacement in outputPathRegexReplacements)
                 {
-                    outputFile = outputFile.Replace(nameReplacement.Key, nameReplacement.Value);
+                    if (nameReplacement.Key.StartsWith("regex:"))
+                    {
+                        var regexPattern = nameReplacement.Key.Substring(6);
+                        var replaced = Regex.Replace(outputFile, regexPattern, nameReplacement.Value);
+                        //Console.WriteLine($"Origin:{outputFile}");
+                        //Console.WriteLine($"Replaced:{replaced}");
+                        outputFile = replaced;
+                    }
+                    else
+                    {
+                        outputFile = outputFile.Replace(nameReplacement.Key, nameReplacement.Value);
+                    }
                 }
             }
 
