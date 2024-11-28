@@ -10,6 +10,7 @@ namespace XiaoyaMetaSync
             PrintHelpGenStrm();
             PrintHelpClearLog();
             PrintHelpRemoveExpiredMeta();
+            PrintHelpCollectShows();
         }
 
         private static void PrintHelpRemoveExpiredMeta()
@@ -30,11 +31,6 @@ namespace XiaoyaMetaSync
             Console.WriteLine("Usage: --strm <dir> [<--replace|-R> <strm file old string> <strm file new string>]...");
         }
 
-        private static void PrintHelpGenStrm()
-        {
-            Console.WriteLine("Usage: --genstrm <media path> <url prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url]");
-        }
-
         static void Main(string[] args)
         {
 
@@ -53,6 +49,7 @@ namespace XiaoyaMetaSync
                     case "--genstrm": CmdGetStrm(args); break;
                     case "--clear_log": CmdClearLog(args); break;
                     case "--remove_expired_meta": CmdRemoveExpiredMeta(args); break;
+                    case "--collect_shows_strm": CmdGenStrmCollectShows(args); break;
                     default: PrintHelp(); break;
                 }
             }
@@ -61,14 +58,89 @@ namespace XiaoyaMetaSync
                 Console.WriteLine(ex.Message);
             }
         }
+        private static void PrintHelpCollectShows()
+        {
+            Console.WriteLine("Usage: --collect_shows_strm <media path> <url prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
+        }
+        private static void CmdGenStrmCollectShows(string[] args)
+        {
+            var path = args[1];
+            var urlPrefix = args[2];
+            var output = args[3];
 
+            var replacementConf = GetFollowArg(args, "--replacement_conf");
+
+            KeyValuePair<string, string>[] filenameReplacements, shownameReplacements;
+
+            if (string.IsNullOrEmpty(replacementConf))
+            {
+                filenameReplacements = null;
+                shownameReplacements = null;
+            }
+            else
+            {
+                filenameReplacements = GetReplacementsFromFile(replacementConf, "filename");
+                shownameReplacements = GetReplacementsFromFile(replacementConf, "showname");
+            }
+
+            new XiaoYaMetaSync().CollectShowsStrm(path, urlPrefix, output, args.Contains("--override"), args.Contains("--encode_url"), filenameReplacements, shownameReplacements);
+
+
+        }
+
+        private static KeyValuePair<string, string>[] GetReplacementsFromFile(string replacementConf) => GetReplacementsFromFile(replacementConf, null);
+
+        private static KeyValuePair<string, string>[] GetReplacementsFromFile(string replacementConf, string segment)
+        {
+            var res = new List<KeyValuePair<string, string>>();
+            var lines = File.ReadLines(replacementConf);
+            var onlySegLines = !string.IsNullOrWhiteSpace(segment);
+            var segStarted = !onlySegLines;
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                if (line.StartsWith("segment:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (onlySegLines)
+                    {
+                        var seg = line.Substring(8);
+                        if (segStarted && seg != segment)
+                            break;
+
+                        if (!segStarted && seg == segment)
+                            segStarted = true;
+                    }
+
+                    continue;
+                }
+
+                if (segStarted)
+                {
+                    var kv = line.Split('>');
+                    if (kv.Length > 1)
+                    {
+                        res.Add(new KeyValuePair<string, string>(kv[0], kv[1]));
+                    }
+                    else if (kv.Length > 0)
+                    {
+                        res.Add(new KeyValuePair<string, string>(kv[0], ""));
+                    }
+                }
+            }
+            return res.ToArray();
+        }
 
         private static void CmdClearLog(string[] args)
         {
             CommonLogger.ClearLog();
             Console.WriteLine("Clear Logs Finished");
         }
-
+        private static void PrintHelpGenStrm()
+        {
+            Console.WriteLine("Usage: --genstrm <media path> <url prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--path_remap <replacement config>]");
+        }
         private static void CmdGetStrm(string[] args)
         {
             if (args.Length < 4)
@@ -83,6 +155,8 @@ namespace XiaoyaMetaSync
             CommonLogger.NewLog();
             CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
 
+            var pathRemap = GetFollowArg(args, "--path_remap");
+            var remapReplacements = string.IsNullOrEmpty(pathRemap) ? null : GetReplacementsFromFile(pathRemap);
 
             new XiaoYaMetaSync().StartRecursiveSyncMediaToStrm(mediaRootPath,
                 urlPrefix,
@@ -92,39 +166,12 @@ namespace XiaoyaMetaSync
                 args.Contains("--rewrite_strm"),
                 args.Contains("--encode_url"),
                 args.Contains("--strm_keep_filetype"),
-                GetOutputPathRegexReplacement(args));
+                remapReplacements);
 
             var duration = DateTime.Now - startDate;
             CommonLogger.LogLine($"GenStrm Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
         }
 
-        private static KeyValuePair<string, string>[] GetOutputPathRegexReplacement(string[] args)
-        {
-            var res = new List<KeyValuePair<string, string>>();
-            try
-            {
-                var renameConf = GetFollowArgs(args, "--path_remap", 1)[0];
-                var lines = File.ReadAllLines(renameConf);
-                foreach (var line in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-                    var kv = line.Split('>');
-                    if (kv.Length > 1)
-                    {
-                        res.Add(new KeyValuePair<string, string>(kv[0], kv[1]));
-                    }
-                    else if (kv.Length > 0)
-                    {
-                        res.Add(new KeyValuePair<string, string>(kv[0], ""));
-                    }
-                }
-            }
-            catch (Exception)
-            {
-
-            }
-            return res.Count > 0 ? res.ToArray() : null;
-        }
 
         private static void CmdStrm(string[] args)
         {
@@ -160,6 +207,19 @@ namespace XiaoyaMetaSync
 
             }
             return res;
+        }
+
+        private static string GetFollowArg(string[] args, string matches)
+        {
+            try
+            {
+                var follow = GetFollowArgs(args, matches, 1);
+                return follow[0];
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private static List<string> GetFollowArgs(string[] args, string matches, int follows)

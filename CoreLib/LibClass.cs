@@ -1,5 +1,13 @@
-﻿namespace XiaoyaMetaSync.CoreLib
+﻿using System.Text.RegularExpressions;
+
+namespace XiaoyaMetaSync.CoreLib
 {
+    public class CommonDefines
+    {
+        public const string MEDIA_FILE_LIST = ".mp4|.mkv|.avi|.ts|.asf|.wmv|.wm|.wmp|.m4v|.m4b|.m4r|.m4p|.mpeg4|.mov|.flv|.f4v|.swf|.hlv|.rm|.ram|.rmvb|.rp|.rpm|.rt|.smil|.scm|.mpg|.mpe|.mpeg(*)|.dat|.tsv|.mts|.m2t|.m2ts|.tp|.tpr|.pva|.pss|.m1v|.m2v|.m2p|.mp2v|.mpv2|.3gp|.3gpp|.3g2|.3gp2|.ifo|.vob|.amv|.csf|.mts|.mod|.evo|.pmp|.webm|.mxf|.vp6|.bik|.ogm|.ogv|.ogx|.xlmv|.divx|.qt";
+        public static readonly string[] MEDIA_FILE_EXTS = MEDIA_FILE_LIST.Split('|');
+    }
+
     public class CommonLogger
     {
         private static readonly string LOG_DIR = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XiaoyaMetaSync", "Log");
@@ -54,6 +62,33 @@
                 }
             }
             return path;
+        }
+
+        public static IEnumerable<string> CollectMediaFiles(string path)
+        {
+            return Directory.EnumerateFiles(path, "", SearchOption.AllDirectories).Where(f => CommonDefines.MEDIA_FILE_EXTS.Any(f.ToLower().EndsWith));
+        }
+
+        public static string KVReplace(KeyValuePair<string, string>[] replacements, string filePath)
+        {
+            if (replacements != null && replacements.Length > 0)
+            {
+                foreach (var replace in replacements)
+                {
+                    if (replace.Key.StartsWith("regex:"))
+                    {
+                        var regexPattern = replace.Key.Substring(6);
+                        var replaced = Regex.Replace(filePath, regexPattern, replace.Value);
+                        filePath = replaced;
+                    }
+                    else
+                    {
+                        filePath = filePath.Replace(replace.Key, replace.Value);
+                    }
+                }
+            }
+
+            return filePath;
         }
     }
 

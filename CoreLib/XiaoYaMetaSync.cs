@@ -1,13 +1,12 @@
 ﻿using SevenZipExtractor;
 using System.Text;
-using System.Text.RegularExpressions;
 namespace XiaoyaMetaSync.CoreLib
 {
     public class XiaoYaMetaSync
     {
         private const string DIR_SYNC_CONF_PATH_NAME = ".xymetasync";
         private const string DIR_SYNC_ATTR_FILE_IGNORE = ".ignore";
-        private const string MEDIA_FILE_LIST = ".mp4|.mkv|.avi|.ts|.asf|.wmv|.wm|.wmp|.m4v|.m4b|.m4r|.m4p|.mpeg4|.mov|.flv|.f4v|.swf|.hlv|.rm|.ram|.rmvb|.rp|.rpm|.rt|.smil|.scm|.mpg|.mpe|.mpeg(*)|.dat|.tsv|.mts|.m2t|.m2ts|.tp|.tpr|.pva|.pss|.m1v|.m2v|.m2p|.mp2v|.mpv2|.3gp|.3gpp|.3g2|.3gp2|.ifo|.vob|.amv|.csf|.mts|.mod|.evo|.pmp|.webm|.mxf|.vp6|.bik|.ogm|.ogv|.ogx|.xlmv|.divx|.qt";
+
 
         private int totalEntry = 0;
         private int cnt = 0;
@@ -162,11 +161,11 @@ namespace XiaoyaMetaSync.CoreLib
                 {
                     var relativeFile = Path.GetRelativePath(mediaRootPath, file);
                     var relativePath = Path.GetDirectoryName(relativeFile);
-                    var flename = Path.GetFileName(relativeFile);
-                    var outputRelativeFile = CommonUtility.AdaptWindowsFileName(RemapOutputPath(pathRegexReplacements, relativePath));
-                    var outputFile = Path.Combine(outpuPath, outputRelativeFile, flename);
+                    var filename = Path.GetFileName(relativeFile);
+                    var outputRelativeFile = CommonUtility.AdaptWindowsFileName(CommonUtility.KVReplace(pathRegexReplacements, relativePath));
+                    var outputFile = Path.Combine(outpuPath, outputRelativeFile, filename);
                     var fileExtension = Path.GetExtension(file);
-                    if (MEDIA_FILE_LIST.Contains(fileExtension))
+                    if (CommonDefines.MEDIA_FILE_LIST.Contains(fileExtension))
                     {
                         if (strmKeepFileExtension)
                             outputFile += ".strm";
@@ -176,7 +175,7 @@ namespace XiaoyaMetaSync.CoreLib
 
                         if (rewriteStrm || !File.Exists(outputFile))
                         {
-                            GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl);
+                            GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl, WriteFileAsync);
                             CommonLogger.LogLine($"[STRM] {outputFile}", true);
                         }
                         else
@@ -213,36 +212,12 @@ namespace XiaoyaMetaSync.CoreLib
             }
         }
 
-        private static string RemapOutputPath(KeyValuePair<string, string>[] outputPathRegexReplacements, string outputFile)
-        {
-            if (outputPathRegexReplacements != null && outputPathRegexReplacements.Length > 0)
-            {
-                foreach (var nameReplacement in outputPathRegexReplacements)
-                {
-                    if (nameReplacement.Key.StartsWith("regex:"))
-                    {
-                        var regexPattern = nameReplacement.Key.Substring(6);
-                        var replaced = Regex.Replace(outputFile, regexPattern, nameReplacement.Value);
-                        //Console.WriteLine($"Origin:{outputFile}");
-                        //Console.WriteLine($"Replaced:{replaced}");
-                        outputFile = replaced;
-                    }
-                    else
-                    {
-                        outputFile = outputFile.Replace(nameReplacement.Key, nameReplacement.Value);
-                    }
-                }
-            }
-
-            return outputFile;
-        }
-
-        private void GenerateStrm(string urlPrefix, string outputFile, string relativeFile, bool encodeStrmUrl)
+        public static void GenerateStrm(string urlPrefix, string outputFile, string relativeFile, bool encodeStrmUrl, bool writeAsync)
         {
             var url = $"{urlPrefix}/{relativeFile}".Replace("\\", "/");
             if (encodeStrmUrl) url = Uri.EscapeUriString(url);
             Directory.CreateDirectory(Directory.GetParent(outputFile).FullName);
-            if (WriteFileAsync)
+            if (writeAsync)
                 File.WriteAllTextAsync(outputFile, url);
             else
                 File.WriteAllText(outputFile, url);
@@ -300,6 +275,31 @@ namespace XiaoyaMetaSync.CoreLib
 
             }
 
+        }
+
+        public void CollectShowsStrm(string path, string urlPrefix, string output, bool rewrite, bool encodeStrmUrl, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)
+        {
+            var files = CommonUtility.CollectMediaFiles(path);
+            foreach (var file in files)
+            {
+                var fn = Path.GetFileNameWithoutExtension(file);
+
+                fn = CommonUtility.KVReplace(fileNameReplacements, fn);
+                fn = fn.Trim();
+
+                var show = fn;
+
+                show = CommonUtility.KVReplace(showNameReplacements, show);
+                show = show.Trim();
+
+                var outputFile = Path.Combine(output, show, fn + ".strm");
+                if (rewrite || !File.Exists(outputFile))
+                {
+                    var relativeFile = Path.GetRelativePath(path, file);
+                    GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl, WriteFileAsync);
+                    Console.WriteLine(outputFile);
+                }
+            }
         }
     }
 
