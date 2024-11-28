@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/XiaoyaMetaSync/Properties/launchSettings.json
+/XiaoyaMetaSync/Properties/launchSettings.json
+/XiaoyaMetaSync/Properties/launchSettings.json
