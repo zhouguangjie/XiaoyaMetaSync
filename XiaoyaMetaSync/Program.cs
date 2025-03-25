@@ -31,7 +31,7 @@ namespace XiaoyaMetaSync
             Console.WriteLine("Usage: --strm <dir> [<--replace|-R> <strm file old string> <strm file new string>]...");
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
 
             if (args.Length < 1)
@@ -46,7 +46,7 @@ namespace XiaoyaMetaSync
                 {
                     case "--sync": CmdSync(args); break;
                     case "--strm": CmdStrm(args); break;
-                    case "--genstrm": CmdGetStrm(args); break;
+                    case "--genstrm": await CmdGetStrmAsync(args); break;
                     case "--clear_log": CmdClearLog(args); break;
                     case "--remove_expired_meta": CmdRemoveExpiredMeta(args); break;
                     case "--collect_shows_strm": CmdGenStrmCollectShows(args); break;
@@ -139,9 +139,9 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpGenStrm()
         {
-            Console.WriteLine("Usage: --genstrm <media path> <url prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--path_remap <replacement config>]");
+            Console.WriteLine("Usage: --genstrm < --webdav webdav_url | media_path url_prefix > <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--path_remap <replacement config>]");
         }
-        private static void CmdGetStrm(string[] args)
+        private static async Task CmdGetStrmAsync(string[] args)
         {
             if (args.Length < 4)
             {
@@ -149,24 +149,44 @@ namespace XiaoyaMetaSync
                 return;
             }
             var startDate = DateTime.Now;
-            var mediaRootPath = args[1];
-            var urlPrefix = args[2];
-            var outputPath = args[3];
-            CommonLogger.NewLog();
-            CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
+            if (args[1] == "--webdav")
+            {
+                var mediaRootPath = args[1];
+                var urlPrefix = args[2];
+                var outputPath = args[3];
+                CommonLogger.NewLog();
+                CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
 
-            var pathRemap = GetFollowArg(args, "--path_remap");
-            var remapReplacements = string.IsNullOrEmpty(pathRemap) ? null : GetReplacementsFromFile(pathRemap);
+                var pathRemap = GetFollowArg(args, "--path_remap");
+                var remapReplacements = string.IsNullOrEmpty(pathRemap) ? null : GetReplacementsFromFile(pathRemap);
 
-            new XiaoYaMetaSync().StartRecursiveSyncMediaToStrm(mediaRootPath,
-                urlPrefix,
-                outputPath,
-                args.Contains("--only_strm"),
-                args.Contains("--rewrite_meta"),
-                args.Contains("--rewrite_strm"),
-                args.Contains("--encode_url"),
-                args.Contains("--strm_keep_filetype"),
-                remapReplacements);
+                await new XiaoYaMetaSync().StartGenStrmFromWebDavAsync(urlPrefix, outputPath,
+                    args.Contains("--rewrite_meta"),
+                    args.Contains("--rewrite_strm"),
+                    args.Contains("--strm_keep_filetype"),
+                    remapReplacements);
+            }
+            else
+            {
+                var mediaRootPath = args[1];
+                var urlPrefix = args[2];
+                var outputPath = args[3];
+                CommonLogger.NewLog();
+                CommonLogger.LogLine($"GenStrm Start:{DateTime.Now}", true);
+
+                var pathRemap = GetFollowArg(args, "--path_remap");
+                var remapReplacements = string.IsNullOrEmpty(pathRemap) ? null : GetReplacementsFromFile(pathRemap);
+
+                new XiaoYaMetaSync().StartRecursiveSyncMediaToStrm(mediaRootPath,
+                    urlPrefix,
+                    outputPath,
+                    args.Contains("--only_strm"),
+                    args.Contains("--rewrite_meta"),
+                    args.Contains("--rewrite_strm"),
+                    args.Contains("--encode_url"),
+                    args.Contains("--strm_keep_filetype"),
+                    remapReplacements);
+            }
 
             var duration = DateTime.Now - startDate;
             CommonLogger.LogLine($"GenStrm Finish:{startDate} --> {DateTime.Now}, Duration: {duration}", true);
