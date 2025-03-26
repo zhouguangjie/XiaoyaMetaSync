@@ -182,12 +182,7 @@ namespace XiaoyaMetaSync.CoreLib
             return new WebDavClient();
         }
 
-        public async Task StartGenStrmFromWebDavAsync(string webDavUrl, string outputPath, bool rewriteMetaFiles, bool rewriteStrm, bool strmKeepFileExtension, KeyValuePair<string, string>[] pathRegexReplacements)
-        {
-            await GenStrmFromWebDavAsync(webDavUrl, outputPath, rewriteMetaFiles, rewriteStrm, strmKeepFileExtension, pathRegexReplacements);
-        }
-
-        public async Task GenStrmFromWebDavAsync(string webdavUrl, string output, bool rewriteMetaFiles, bool rewrite, bool strmKeepFileExtension, KeyValuePair<string, string>[] pathRegexReplacements)
+        public async Task GenStrmFromWebDavAsync(string webdavUrl, string output, bool rewrite, bool keepFileExt, KeyValuePair<string, string>[] pathRegexReplacements)
         {
             var webDavUri = new Uri(webdavUrl);
             var webDavReqHost = webDavUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped);
@@ -219,7 +214,7 @@ namespace XiaoyaMetaSync.CoreLib
                     if (CommonUtility.IsMediaFile(file.DisplayName))
                     {
                         var outputFile = "";
-                        if (strmKeepFileExtension)
+                        if (keepFileExt)
                             outputFile = Path.Combine(replacedOutputPath, $"{file.DisplayName}.strm");
                         else
                             outputFile = Path.Combine(replacedOutputPath, $"{Path.GetFileNameWithoutExtension(file.DisplayName)}.strm");
@@ -234,7 +229,7 @@ namespace XiaoyaMetaSync.CoreLib
                 for (int i = 1; i < dirs.Count; i++)
                 {
                     var dir = dirs[i];
-                    await GenStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", Path.Combine(output, dir.DisplayName), rewriteMetaFiles, rewrite, strmKeepFileExtension, pathRegexReplacements);
+                    await GenStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", Path.Combine(output, dir.DisplayName), rewrite, keepFileExt, pathRegexReplacements);
                 }
             }
             else

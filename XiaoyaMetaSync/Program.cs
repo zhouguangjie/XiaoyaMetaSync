@@ -187,8 +187,7 @@ namespace XiaoyaMetaSync
                 var pathRemap = GetFollowArg(args, "--path_remap");
                 var remapReplacements = string.IsNullOrEmpty(pathRemap) ? null : GetReplacementsFromFile(pathRemap);
 
-                await new XiaoYaMetaSync().StartGenStrmFromWebDavAsync(urlPrefix, outputPath,
-                    args.Contains("--rewrite_meta"),
+                await new XiaoYaMetaSync().GenStrmFromWebDavAsync(urlPrefix, outputPath,
                     args.Contains("--rewrite_strm"),
                     args.Contains("--strm_keep_filetype"),
                     remapReplacements);
