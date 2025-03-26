@@ -59,7 +59,8 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpCollectShows()
         {
-            Console.WriteLine("Usage: --collect_shows_strm < --webdav webdav_url | media_path url_prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
+            Console.WriteLine("Usage: --collect_shows_strm --webdav <webdav_url> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
+            Console.WriteLine("Usage: --collect_shows_strm <media_path> <url_prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
         }
         private static async Task CmdGenStrmCollectShowsAsync(string[] args)
         {
@@ -164,7 +165,8 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpGenStrm()
         {
-            Console.WriteLine("Usage: --genstrm < --webdav webdav_url | media_path url_prefix > <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--path_remap <replacement config>]");
+            Console.WriteLine("Usage: --genstrm --webdav <webdav_url> <output> [--rewrite_strm] [--strm_keep_filetype] [--path_remap <replacement config>]");
+            Console.WriteLine("Usage: --genstrm <media_path> <url_prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--path_remap <replacement config>]");
         }
         private static async Task CmdGetStrmAsync(string[] args)
         {

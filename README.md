@@ -22,11 +22,15 @@
 例如以下命令是把Y:\all文件夹和子文件夹所有的strm文件替换小雅alist地址：  
 `.\XiaoyaMetaSync.exe --strm "Y:\all" -R "http://xiaoya.host:5678" "http://istoreos:5688"`
 
-#### 复制元数据并为媒体文件生成strm：--genstrm
+#### 为媒体文件生成strm和复制元数据：--genstrm
+Webdav(只能生成strm)
+`.\XiaoyaMetaSync.exe --genstrm --webdav <webdav路径> <输出路径> [--rewrite_strm]`  
+
+本地挂载alist
 `.\XiaoyaMetaSync.exe --genstrm <alist挂载到本地的路径> <alist对应的url前缀> <输出路径> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url]`  
 
-例如为每日更新的所有视频文件生成strm：   
-`.\XiaoyaMetaSync.exe --genstrm "Z:\xiaoya\每日更新" "http://istoreos:5688/d/每日更新" "D:\xiaoya_meta\meta_sync\每日更新" --only_strm`  
+例子：为每日更新的所有视频文件生成strm
+`.\XiaoyaMetaSync.exe --genstrm "Z:\xiaoya\每日更新" "http://xiaoya.host:5678/d/每日更新" "D:\xiaoya_meta\meta_sync\每日更新" --only_strm`  
 
 可选参数说明：  
 `--only_strm`：只为视频文件生成strm，不复制其他元数据等文件  
