@@ -59,7 +59,7 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpCollectShows()
         {
-            Console.WriteLine("Usage: --collect_shows_strm --webdav <webdav_url> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
+            Console.WriteLine("Usage: --collect_shows_strm --webdav <webdav_url> <output> [--override] [--replacement_conf <replacement config>]");
             Console.WriteLine("Usage: --collect_shows_strm <media_path> <url_prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
         }
         private static async Task CmdGenStrmCollectShowsAsync(string[] args)
