@@ -1,5 +1,4 @@
-﻿using System.IO;
-using XiaoyaMetaSync.CoreLib;
+﻿using XiaoyaMetaSync.CoreLib;
 namespace XiaoyaMetaSync
 {
     internal class Program
@@ -34,7 +33,6 @@ namespace XiaoyaMetaSync
 
         static async Task Main(string[] args)
         {
-
             if (args.Length < 1)
             {
                 PrintHelp();

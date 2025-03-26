@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace XiaoyaMetaSync.CoreLib
 {
@@ -42,6 +43,14 @@ namespace XiaoyaMetaSync.CoreLib
     {
         public static string AdaptWindowsFileName(string filename)
         {
+
+            var winDrvPath = "";
+            if (Regex.IsMatch(filename, @"^[a-zA-Z]:[/\\]"))
+            {
+                Trace.WriteLine("Windows Path");
+                winDrvPath = filename.Substring(0, 3);
+                filename = filename.Substring(3);
+            }
             filename = filename.Replace('|', '_')
                 .Replace('"', '_')
                 .Replace('*', '_')
@@ -51,6 +60,7 @@ namespace XiaoyaMetaSync.CoreLib
                 .Replace(':', '_')
                 .Trim();
 
+            filename = winDrvPath + filename;
             var pathElements = filename.Split(['/', '\\']);
             var path = filename.StartsWith('/') ? "/" : (filename.StartsWith('\\') ? "\\" : "");
             foreach (var item in pathElements)
