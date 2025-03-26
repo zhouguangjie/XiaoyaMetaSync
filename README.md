@@ -1,5 +1,5 @@
 ### 说明
-这是一个把小雅元数据解压到指定文件夹的命令行工具，需要 .net 8 运行时。
+这是一个把小雅元数据解压到指定文件夹的命令行工具，需要 .net 8 运行时。  
 
 ### 使用方法
 下载最新[Release](https://github.com/zhouguangjie/XiaoyaMetaSync/releases/latest)，解压，写批处理或使用计划任务调用。  
@@ -23,13 +23,13 @@
 `.\XiaoyaMetaSync.exe --strm "Y:\all" -R "http://xiaoya.host:5678" "http://istoreos:5688"`
 
 #### 为媒体文件生成strm和复制元数据：--genstrm
-Webdav(只能生成strm)
+Webdav(只能生成strm)  
 `.\XiaoyaMetaSync.exe --genstrm --webdav <webdav路径> <输出路径> [--rewrite_strm]`  
 
-本地挂载alist
+本地挂载alist  
 `.\XiaoyaMetaSync.exe --genstrm <alist挂载到本地的路径> <alist对应的url前缀> <输出路径> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url]`  
 
-例子：为每日更新的所有视频文件生成strm
+例子：为每日更新的所有视频文件生成strm  
 `.\XiaoyaMetaSync.exe --genstrm "Z:\xiaoya\每日更新" "http://xiaoya.host:5678/d/每日更新" "D:\xiaoya_meta\meta_sync\每日更新" --only_strm`  
 
 可选参数说明：  
@@ -41,7 +41,7 @@ Webdav(只能生成strm)
 #### 删除不存在于压缩包里的元数据文件夹：--remove_expired_meta
 `.\XiaoyaMetaSync.exe --remove_expired_meta <小雅元数据压缩包文件路径> <元数据路径>`  
 
-当新版压缩包某个文件夹已经删除或改名，用本方法可以删除元数据里的多余文件夹
+当新版压缩包某个文件夹已经删除或改名，用本方法可以删除元数据里的多余文件夹  
 
 #### 清理日志：--clear_log
 日志路径：`%LOCALAPPDATA%\XiaoyaMetaSync\Log`  
