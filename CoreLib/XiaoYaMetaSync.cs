@@ -187,12 +187,12 @@ namespace XiaoyaMetaSync.CoreLib
             await GenStrmFromWebDavAsync(webDavUrl, outputPath, rewriteMetaFiles, rewriteStrm, strmKeepFileExtension, pathRegexReplacements);
         }
 
-        public async Task GenStrmFromWebDavAsync(string webDavUrl, string outputPath, bool rewriteMetaFiles, bool rewriteStrm, bool strmKeepFileExtension, KeyValuePair<string, string>[] pathRegexReplacements)
+        public async Task GenStrmFromWebDavAsync(string webdavUrl, string output, bool rewriteMetaFiles, bool rewrite, bool strmKeepFileExtension, KeyValuePair<string, string>[] pathRegexReplacements)
         {
-            var webDavUri = new Uri(webDavUrl);
+            var webDavUri = new Uri(webdavUrl);
             var webDavReqHost = webDavUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped);
 
-            var result = await _client.Propfind(webDavUrl);
+            var result = await _client.Propfind(webdavUrl);
 
             if (result.IsSuccessful)
             {
@@ -215,9 +215,8 @@ namespace XiaoyaMetaSync.CoreLib
 
                 foreach (var file in files)
                 {
-                    var replacedOutputPath = CommonUtility.AdaptWindowsFileName(CommonUtility.KVReplace(pathRegexReplacements, outputPath));
-                    var fileExtension = Path.GetExtension(file.DisplayName);
-                    if (CommonDefines.MEDIA_FILE_LIST.Contains(fileExtension))
+                    var replacedOutputPath = CommonUtility.AdaptWindowsFileName(CommonUtility.KVReplace(pathRegexReplacements, output));
+                    if (CommonUtility.IsMediaFile(file.DisplayName))
                     {
                         var outputFile = "";
                         if (strmKeepFileExtension)
@@ -225,25 +224,9 @@ namespace XiaoyaMetaSync.CoreLib
                         else
                             outputFile = Path.Combine(replacedOutputPath, $"{Path.GetFileNameWithoutExtension(file.DisplayName)}.strm");
 
+                        string fileContent = GetWebdavFileUrl(webDavReqHost, file);
+                        WriteStrm(outputFile, fileContent, rewrite);
 
-                        if (rewriteStrm || !File.Exists(outputFile))
-                        {
-                            var uri = file.Uri;
-                            if (uri.StartsWith("/dav/")) uri = "/d/" + uri.Substring(5);
-                            var fileContent = $"{webDavReqHost}{uri}";
-                            Directory.CreateDirectory(replacedOutputPath);
-
-                            if (WriteFileAsync)
-                                File.WriteAllTextAsync(outputFile, fileContent);
-                            else
-                                File.WriteAllText(outputFile, fileContent);
-
-                            CommonLogger.LogLine($"[STRM] {outputFile}", true);
-                        }
-                        else
-                        {
-                            Console.WriteLine($"[SKIP]{outputFile}");
-                        }
                         Console.WriteLine();
                     }
                 }
@@ -251,12 +234,38 @@ namespace XiaoyaMetaSync.CoreLib
                 for (int i = 1; i < dirs.Count; i++)
                 {
                     var dir = dirs[i];
-                    await GenStrmFromWebDavAsync($"{webDavUrl}/{dir.DisplayName}", Path.Combine(outputPath, dir.DisplayName), rewriteMetaFiles, rewriteStrm, strmKeepFileExtension, pathRegexReplacements);
+                    await GenStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", Path.Combine(output, dir.DisplayName), rewriteMetaFiles, rewrite, strmKeepFileExtension, pathRegexReplacements);
                 }
             }
             else
             {
-                Console.WriteLine($"[Request url error] {webDavUrl}");
+                Console.WriteLine($"[Request url error] {webdavUrl}");
+            }
+        }
+
+        private static string GetWebdavFileUrl(string webDavReqHost, WebDavResource file)
+        {
+            var uri = file.Uri;
+            if (uri.StartsWith("/dav/")) uri = "/d/" + uri.Substring(5);
+            var fileContent = $"{webDavReqHost}{uri}";
+            return fileContent;
+        }
+
+        private void WriteStrm(string filePath, string fileContent, bool rewrite)
+        {
+            if (rewrite || !File.Exists(filePath))
+            {
+                Directory.CreateDirectory(Directory.GetParent(filePath).FullName);
+                if (WriteFileAsync)
+                    File.WriteAllTextAsync(filePath, fileContent);
+                else
+                    File.WriteAllText(filePath, fileContent);
+
+                CommonLogger.LogLine($"[STRM] {filePath}", true);
+            }
+            else
+            {
+                Console.WriteLine($"[SKIP]{filePath}");
             }
         }
 
@@ -273,8 +282,8 @@ namespace XiaoyaMetaSync.CoreLib
                     var filename = Path.GetFileName(relativeFile);
                     var outputRelativeFile = CommonUtility.AdaptWindowsFileName(CommonUtility.KVReplace(pathRegexReplacements, relativePath));
                     var outputFile = Path.Combine(outpuPath, outputRelativeFile, filename);
-                    var fileExtension = Path.GetExtension(file);
-                    if (CommonDefines.MEDIA_FILE_LIST.Contains(fileExtension))
+
+                    if (CommonUtility.IsMediaFile(file))
                     {
                         if (strmKeepFileExtension)
                             outputFile += ".strm";
@@ -384,6 +393,62 @@ namespace XiaoyaMetaSync.CoreLib
 
             }
 
+        }
+
+        public async Task CollectShowsStrmFromWebDavAsync(string webdavUrl, string output, bool rewrite, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)
+        {
+            var webDavUri = new Uri(webdavUrl);
+            var webDavReqHost = webDavUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped);
+
+            var result = await _client.Propfind(webdavUrl);
+
+            if (result.IsSuccessful)
+            {
+                var files = new List<WebDavResource>();
+                var dirs = new List<WebDavResource>();
+
+                foreach (var res in result.Resources)
+                {
+                    if (res.IsCollection)
+                    {
+                        dirs.Add(res);
+                        Trace.WriteLine($"DIR:{res.DisplayName}");
+                    }
+                    else if (CommonUtility.IsMediaFile(res.DisplayName))
+                    {
+                        files.Add(res);
+                        Trace.WriteLine($"FILE:{res.DisplayName}");
+                    }
+                }
+
+                foreach (var file in files)
+                {
+                    var fn = Path.GetFileNameWithoutExtension(file.DisplayName);
+
+                    fn = CommonUtility.KVReplace(fileNameReplacements, fn);
+                    fn = fn.Trim();
+
+                    var show = fn;
+
+                    show = CommonUtility.KVReplace(showNameReplacements, show);
+                    show = show.Trim();
+
+                    var outputFile = Path.Combine(output, show, fn + ".strm");
+
+                    string fileContent = GetWebdavFileUrl(webDavReqHost, file);
+                    WriteStrm(outputFile, fileContent, rewrite);
+                }
+
+                for (int i = 1; i < dirs.Count; i++)
+                {
+                    var dir = dirs[i];
+                    await CollectShowsStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", output, rewrite, fileNameReplacements, showNameReplacements);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[Request url error] {webdavUrl}");
+            }
         }
 
         public void CollectShowsStrm(string path, string urlPrefix, string output, bool rewrite, bool encodeStrmUrl, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)

@@ -1,4 +1,5 @@
-﻿using XiaoyaMetaSync.CoreLib;
+﻿using System.IO;
+using XiaoyaMetaSync.CoreLib;
 namespace XiaoyaMetaSync
 {
     internal class Program
@@ -49,7 +50,7 @@ namespace XiaoyaMetaSync
                     case "--genstrm": await CmdGetStrmAsync(args); break;
                     case "--clear_log": CmdClearLog(args); break;
                     case "--remove_expired_meta": CmdRemoveExpiredMeta(args); break;
-                    case "--collect_shows_strm": CmdGenStrmCollectShows(args); break;
+                    case "--collect_shows_strm": await CmdGenStrmCollectShowsAsync(args); break;
                     default: PrintHelp(); break;
                 }
             }
@@ -60,30 +61,56 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpCollectShows()
         {
-            Console.WriteLine("Usage: --collect_shows_strm <media path> <url prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
+            Console.WriteLine("Usage: --collect_shows_strm < --webdav webdav_url | media_path url_prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
         }
-        private static void CmdGenStrmCollectShows(string[] args)
+        private static async Task CmdGenStrmCollectShowsAsync(string[] args)
         {
-            var path = args[1];
-            var urlPrefix = args[2];
-            var output = args[3];
-
-            var replacementConf = GetFollowArg(args, "--replacement_conf");
-
-            KeyValuePair<string, string>[] filenameReplacements, shownameReplacements;
-
-            if (string.IsNullOrEmpty(replacementConf))
+            if (args[1] == "--webdav")
             {
-                filenameReplacements = null;
-                shownameReplacements = null;
+                var url = args[2];
+                var output = args[3];
+
+                var replacementConf = GetFollowArg(args, "--replacement_conf");
+
+                KeyValuePair<string, string>[] filenameReplacements, shownameReplacements;
+
+                if (string.IsNullOrEmpty(replacementConf))
+                {
+                    filenameReplacements = null;
+                    shownameReplacements = null;
+                }
+                else
+                {
+                    filenameReplacements = GetReplacementsFromFile(replacementConf, "filename");
+                    shownameReplacements = GetReplacementsFromFile(replacementConf, "showname");
+                }
+
+                await new XiaoYaMetaSync().CollectShowsStrmFromWebDavAsync(url, output, args.Contains("--override"), filenameReplacements, shownameReplacements);
             }
             else
             {
-                filenameReplacements = GetReplacementsFromFile(replacementConf, "filename");
-                shownameReplacements = GetReplacementsFromFile(replacementConf, "showname");
-            }
+                var path = args[1];
+                var urlPrefix = args[2];
+                var output = args[3];
 
-            new XiaoYaMetaSync().CollectShowsStrm(path, urlPrefix, output, args.Contains("--override"), args.Contains("--encode_url"), filenameReplacements, shownameReplacements);
+                var replacementConf = GetFollowArg(args, "--replacement_conf");
+
+                KeyValuePair<string, string>[] filenameReplacements, shownameReplacements;
+
+                if (string.IsNullOrEmpty(replacementConf))
+                {
+                    filenameReplacements = null;
+                    shownameReplacements = null;
+                }
+                else
+                {
+                    filenameReplacements = GetReplacementsFromFile(replacementConf, "filename");
+                    shownameReplacements = GetReplacementsFromFile(replacementConf, "showname");
+                }
+
+                new XiaoYaMetaSync().CollectShowsStrm(path, urlPrefix, output, args.Contains("--override"), args.Contains("--encode_url"), filenameReplacements, shownameReplacements);
+
+            }
 
 
         }

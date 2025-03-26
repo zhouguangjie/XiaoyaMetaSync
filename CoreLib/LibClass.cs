@@ -90,6 +90,8 @@ namespace XiaoyaMetaSync.CoreLib
 
             return filePath;
         }
+
+        public static bool IsMediaFile(string filePath) => CommonDefines.MEDIA_FILE_LIST.Contains(Path.GetExtension(filePath), StringComparison.OrdinalIgnoreCase);
     }
 
     public class StrmFileHelper
