@@ -24,6 +24,8 @@
 
 #### 为媒体文件生成strm和复制元数据：--genstrm
 Webdav(只能生成strm)  
+`set XY_SYNC_WEBDAV_USER=<webdav用户名>`  
+`set XY_SYNC_WEBDAV_PASSWORD=<webdav密码>`  
 `.\XiaoyaMetaSync.exe --genstrm --webdav <webdav路径> <输出路径> [--rewrite_strm]`  
 
 本地挂载alist  
