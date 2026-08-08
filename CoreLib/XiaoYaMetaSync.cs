@@ -182,7 +182,7 @@ namespace XiaoyaMetaSync.CoreLib
             return new WebDavClient();
         }
 
-        public async Task GenStrmFromWebDavAsync(string webdavUrl, string output, bool rewrite, bool keepFileExt, KeyValuePair<string, string>[] pathRegexReplacements)
+        public async Task GenStrmFromWebDavAsync(string webdavUrl, string output, bool overwrite, bool keepFileExt, bool includeSubtitle, KeyValuePair<string, string>[] pathRegexReplacements)
         {
             var webDavUri = new Uri(webdavUrl);
             var webDavReqHost = webDavUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped);
@@ -211,6 +211,7 @@ namespace XiaoyaMetaSync.CoreLib
                 foreach (var file in files)
                 {
                     var replacedOutputPath = CommonUtility.AdaptWindowsFileName(CommonUtility.KVReplace(pathRegexReplacements, output));
+                    string fileUrl = GetWebdavFileUrl(webDavReqHost, file);
                     if (CommonUtility.IsMediaFile(file.DisplayName))
                     {
                         var outputFile = "";
@@ -219,17 +220,21 @@ namespace XiaoyaMetaSync.CoreLib
                         else
                             outputFile = Path.Combine(replacedOutputPath, $"{Path.GetFileNameWithoutExtension(file.DisplayName)}.strm");
 
-                        string fileContent = GetWebdavFileUrl(webDavReqHost, file);
-                        WriteStrm(outputFile, fileContent, rewrite);
+                        WriteStrm(outputFile, fileUrl, overwrite);
 
                         Console.WriteLine();
+                    }
+                    else if (includeSubtitle && CommonUtility.IsSubtileFile(file.DisplayName))
+                    {
+                        var outputFile = Path.Combine(replacedOutputPath, file.DisplayName);
+                        await FetchWebDavFileAsync(fileUrl, outputFile, overwrite);
                     }
                 }
 
                 for (int i = 1; i < dirs.Count; i++)
                 {
                     var dir = dirs[i];
-                    await GenStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", Path.Combine(output, dir.DisplayName), rewrite, keepFileExt, pathRegexReplacements);
+                    await GenStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", Path.Combine(output, dir.DisplayName), overwrite, keepFileExt, includeSubtitle, pathRegexReplacements);
                 }
             }
             else
@@ -246,9 +251,9 @@ namespace XiaoyaMetaSync.CoreLib
             return fileContent;
         }
 
-        private void WriteStrm(string filePath, string fileContent, bool rewrite)
+        private void WriteStrm(string filePath, string fileContent, bool overwrite)
         {
-            if (rewrite || !File.Exists(filePath))
+            if (overwrite || !File.Exists(filePath))
             {
                 Directory.CreateDirectory(Directory.GetParent(filePath).FullName);
                 if (WriteFileAsync)
@@ -390,7 +395,7 @@ namespace XiaoyaMetaSync.CoreLib
 
         }
 
-        public async Task CollectShowsStrmFromWebDavAsync(string webdavUrl, string output, bool rewrite, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)
+        public async Task CollectShowsStrmFromWebDavAsync(string webdavUrl, string output, bool overwrite, bool includeSubtitle, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)
         {
             var webDavUri = new Uri(webdavUrl);
             var webDavReqHost = webDavUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped);
@@ -412,7 +417,12 @@ namespace XiaoyaMetaSync.CoreLib
                     else if (CommonUtility.IsMediaFile(res.DisplayName))
                     {
                         files.Add(res);
-                        Trace.WriteLine($"FILE:{res.DisplayName}");
+                        Trace.WriteLine($"MEDIA:{res.DisplayName}");
+                    }
+                    else if (includeSubtitle && CommonUtility.IsSubtileFile(res.DisplayName))
+                    {
+                        dirs.Add(res);
+                        Trace.WriteLine($"SUB:{res.DisplayName}");
                     }
                 }
 
@@ -428,16 +438,25 @@ namespace XiaoyaMetaSync.CoreLib
                     show = CommonUtility.KVReplace(showNameReplacements, show);
                     show = show.Trim();
 
-                    var outputFile = Path.Combine(output, show, fn + ".strm");
+                    string fileUrl = GetWebdavFileUrl(webDavReqHost, file);
 
-                    string fileContent = GetWebdavFileUrl(webDavReqHost, file);
-                    WriteStrm(outputFile, fileContent, rewrite);
+                    if (CommonUtility.IsMediaFile(file.DisplayName))
+                    {
+                        var outputFile = Path.Combine(output, show, fn + ".strm");
+                        WriteStrm(outputFile, fileUrl, overwrite);
+                    }
+                    else if (includeSubtitle && CommonUtility.IsSubtileFile(file.DisplayName))
+                    {
+                        var ext = Path.GetExtension(file.DisplayName);
+                        var outputFile = Path.Combine(output, show, fn + ext);
+                        await FetchWebDavFileAsync(fileUrl, outputFile, overwrite);
+                    }
                 }
 
                 for (int i = 1; i < dirs.Count; i++)
                 {
                     var dir = dirs[i];
-                    await CollectShowsStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", output, rewrite, fileNameReplacements, showNameReplacements);
+                    await CollectShowsStrmFromWebDavAsync($"{webdavUrl}/{dir.DisplayName}", output, overwrite, includeSubtitle, fileNameReplacements, showNameReplacements);
                 }
             }
             else
@@ -446,9 +465,34 @@ namespace XiaoyaMetaSync.CoreLib
             }
         }
 
-        public void CollectShowsStrm(string path, string urlPrefix, string output, bool rewrite, bool encodeStrmUrl, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)
+        private static async Task FetchWebDavFileAsync(string fileUrl, string outputFile, bool overwrite)
         {
-            var files = CommonUtility.CollectMediaFiles(path);
+            var fileExists = File.Exists(outputFile);
+            if (fileExists && !overwrite)
+            {
+                Console.WriteLine($"[SKIP]{outputFile}");
+            }
+            else
+            {
+
+                using (var response = await _client.GetRawFile(fileUrl))
+                {
+                    if (fileExists)
+                        File.Delete(outputFile);
+                    using (var fs = File.Create(outputFile))
+                    {
+                        await response.Stream.CopyToAsync(fs);
+                        CommonLogger.LogLine($"[FETCH] {outputFile}", true);
+                    }
+
+                }
+            }
+        }
+
+        public void CollectShowsStrm(string path, string urlPrefix, string output, bool overwrite, bool encodeStrmUrl, bool copySubtitles, KeyValuePair<string, string>[] fileNameReplacements, KeyValuePair<string, string>[] showNameReplacements)
+        {
+            var files = CommonUtility.CollectMediaFiles(path, copySubtitles);
+
             foreach (var file in files)
             {
                 var fn = Path.GetFileNameWithoutExtension(file);
@@ -461,11 +505,21 @@ namespace XiaoyaMetaSync.CoreLib
                 show = CommonUtility.KVReplace(showNameReplacements, show);
                 show = show.Trim();
 
-                var outputFile = Path.Combine(output, show, fn + ".strm");
-                if (rewrite || !File.Exists(outputFile))
+                if (CommonUtility.IsMediaFile(file))
                 {
-                    var relativeFile = Path.GetRelativePath(path, file);
-                    GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl, WriteFileAsync);
+                    var outputFile = Path.Combine(output, show, fn + ".strm");
+                    if (overwrite || !File.Exists(outputFile))
+                    {
+                        var relativeFile = Path.GetRelativePath(path, file);
+                        GenerateStrm(urlPrefix, outputFile, relativeFile, encodeStrmUrl, WriteFileAsync);
+                        Console.WriteLine(outputFile);
+                    }
+                }
+                else if (CommonUtility.IsSubtileFile(file))
+                {
+                    var ext = Path.GetExtension(file);
+                    var outputFile = Path.Combine(output, show, fn + ext);
+                    File.Copy(file, outputFile, overwrite);
                     Console.WriteLine(outputFile);
                 }
             }

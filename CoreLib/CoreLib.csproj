@@ -7,7 +7,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="SevenZipExtractor" Version="1.0.19" />
-		<PackageReference Include="WebDav.Client" Version="2.8.0" />
+		<PackageReference Include="WebDav.Client" Version="2.9.0" />
 	</ItemGroup>
 
 	<ItemGroup>

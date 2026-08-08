@@ -5,8 +5,10 @@ namespace XiaoyaMetaSync.CoreLib
 {
     public class CommonDefines
     {
-        public const string MEDIA_FILE_LIST = ".mp4|.mkv|.avi|.ts|.asf|.wmv|.wm|.wmp|.m4v|.m4b|.m4r|.m4p|.mpeg4|.mov|.flv|.f4v|.swf|.hlv|.rm|.ram|.rmvb|.rp|.rpm|.rt|.smil|.scm|.mpg|.mpe|.mpeg(*)|.dat|.tsv|.mts|.m2t|.m2ts|.tp|.tpr|.pva|.pss|.m1v|.m2v|.m2p|.mp2v|.mpv2|.3gp|.3gpp|.3g2|.3gp2|.ifo|.vob|.amv|.csf|.mts|.mod|.evo|.pmp|.webm|.mxf|.vp6|.bik|.ogm|.ogv|.ogx|.xlmv|.divx|.qt";
-        public static readonly string[] MEDIA_FILE_EXTS = MEDIA_FILE_LIST.Split('|');
+        public const string MEDIA_FILE_EXT_LIST = ".mp4|.mkv|.avi|.ts|.asf|.wmv|.wm|.wmp|.m4v|.m4b|.m4r|.m4p|.mpeg4|.mov|.flv|.f4v|.swf|.hlv|.rm|.ram|.rmvb|.rp|.rpm|.rt|.smil|.scm|.mpg|.mpe|.mpeg(*)|.dat|.tsv|.mts|.m2t|.m2ts|.tp|.tpr|.pva|.pss|.m1v|.m2v|.m2p|.mp2v|.mpv2|.3gp|.3gpp|.3g2|.3gp2|.ifo|.vob|.amv|.csf|.mts|.mod|.evo|.pmp|.webm|.mxf|.vp6|.bik|.ogm|.ogv|.ogx|.xlmv|.divx|.qt";
+        public const string SUBTITLE_FILE_EXT_LIST = ".srt|.ass";
+        public static readonly string[] MEDIA_FILE_EXTS = MEDIA_FILE_EXT_LIST.Split('|');
+        public static readonly string[] SUBTITLE_FILE_EXTS = SUBTITLE_FILE_EXT_LIST.Split('|');
     }
 
     public class CommonLogger
@@ -74,10 +76,18 @@ namespace XiaoyaMetaSync.CoreLib
             return path;
         }
 
-        public static IEnumerable<string> CollectMediaFiles(string path)
+        public static IEnumerable<string> CollectMediaFiles(string path, bool includeSubtitleFiles)
         {
-            return Directory.EnumerateFiles(path, "", SearchOption.AllDirectories).Where(f => CommonDefines.MEDIA_FILE_EXTS.Any(f.ToLower().EndsWith));
+            if (includeSubtitleFiles)
+            {
+                return Directory.EnumerateFiles(path, "", SearchOption.AllDirectories).Where(f => IsMediaFile(f) || IsSubtileFile(f));
+            }
+            return Directory.EnumerateFiles(path, "", SearchOption.AllDirectories).Where(f => IsMediaFile(f));
         }
+
+        public static bool IsSubtileFile(string path) => CommonDefines.SUBTITLE_FILE_EXTS.Any(path.ToLower().EndsWith);
+        public static bool IsMediaFile(string path) => CommonDefines.MEDIA_FILE_EXTS.Any(path.ToLower().EndsWith);
+        //public static bool IsMediaFile(string filePath) => CommonDefines.MEDIA_FILE_EXT_LIST.Contains(Path.GetExtension(filePath), StringComparison.OrdinalIgnoreCase);
 
         public static string KVReplace(KeyValuePair<string, string>[] replacements, string filePath)
         {
@@ -101,7 +111,6 @@ namespace XiaoyaMetaSync.CoreLib
             return filePath;
         }
 
-        public static bool IsMediaFile(string filePath) => CommonDefines.MEDIA_FILE_LIST.Contains(Path.GetExtension(filePath), StringComparison.OrdinalIgnoreCase);
     }
 
     public class StrmFileHelper

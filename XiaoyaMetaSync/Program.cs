@@ -59,8 +59,8 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpCollectShows()
         {
-            Console.WriteLine("Usage: --collect_shows_strm --webdav <webdav_url> <output> [--override] [--replacement_conf <replacement config>]");
-            Console.WriteLine("Usage: --collect_shows_strm <media_path> <url_prefix> <output> [--override] [--encode_url] [--replacement_conf <replacement config>]");
+            Console.WriteLine("Usage: --collect_shows_strm --webdav <webdav_url> <output> [--override] [--fetch_sub] [--replacement_conf <replacement config>]");
+            Console.WriteLine("Usage: --collect_shows_strm <media_path> <url_prefix> <output> [--override] [--encode_url] [--fetch_sub]  [--replacement_conf <replacement config>]");
         }
         private static async Task CmdGenStrmCollectShowsAsync(string[] args)
         {
@@ -75,8 +75,7 @@ namespace XiaoyaMetaSync
 
                 if (string.IsNullOrEmpty(replacementConf))
                 {
-                    filenameReplacements = null;
-                    shownameReplacements = null;
+                    shownameReplacements = filenameReplacements = new KeyValuePair<string, string>[0];
                 }
                 else
                 {
@@ -84,7 +83,7 @@ namespace XiaoyaMetaSync
                     shownameReplacements = GetReplacementsFromFile(replacementConf, "showname");
                 }
 
-                await new XiaoYaMetaSync().CollectShowsStrmFromWebDavAsync(url, output, args.Contains("--override"), filenameReplacements, shownameReplacements);
+                await new XiaoYaMetaSync().CollectShowsStrmFromWebDavAsync(url, output, args.Contains("--override"), args.Contains("--fetch_sub"), filenameReplacements, shownameReplacements);
             }
             else
             {
@@ -98,8 +97,7 @@ namespace XiaoyaMetaSync
 
                 if (string.IsNullOrEmpty(replacementConf))
                 {
-                    filenameReplacements = null;
-                    shownameReplacements = null;
+                    shownameReplacements = filenameReplacements = new KeyValuePair<string, string>[0];
                 }
                 else
                 {
@@ -107,7 +105,7 @@ namespace XiaoyaMetaSync
                     shownameReplacements = GetReplacementsFromFile(replacementConf, "showname");
                 }
 
-                new XiaoYaMetaSync().CollectShowsStrm(path, urlPrefix, output, args.Contains("--override"), args.Contains("--encode_url"), filenameReplacements, shownameReplacements);
+                new XiaoYaMetaSync().CollectShowsStrm(path, urlPrefix, output, args.Contains("--override"), args.Contains("--encode_url"), args.Contains("--fetch_sub"), filenameReplacements, shownameReplacements);
 
             }
 
@@ -165,8 +163,8 @@ namespace XiaoyaMetaSync
         }
         private static void PrintHelpGenStrm()
         {
-            Console.WriteLine("Usage: --genstrm --webdav <webdav_url> <output> [--rewrite_strm] [--strm_keep_filetype] [--path_remap <replacement config>]");
-            Console.WriteLine("Usage: --genstrm <media_path> <url_prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--path_remap <replacement config>]");
+            Console.WriteLine("Usage: --genstrm --webdav <webdav_url> <output> [--rewrite_strm] [--fetch_sub] [--strm_keep_filetype] [--path_remap <replacement config>]");
+            Console.WriteLine("Usage: --genstrm <media_path> <url_prefix> <output> [--only_strm] [--rewrite_meta] [--rewrite_strm] [--encode_url] [--strm_keep_filetype] [--fetch_sub] [--path_remap <replacement config>]");
         }
         private static async Task CmdGetStrmAsync(string[] args)
         {
@@ -190,6 +188,7 @@ namespace XiaoyaMetaSync
                 await new XiaoYaMetaSync().GenStrmFromWebDavAsync(urlPrefix, outputPath,
                     args.Contains("--rewrite_strm"),
                     args.Contains("--strm_keep_filetype"),
+                    args.Contains("--fetch_sub"),
                     remapReplacements);
             }
             else
